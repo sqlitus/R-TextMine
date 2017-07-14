@@ -1,22 +1,54 @@
 ################################################
-# text mine by row of dataset - csv - dataframe
+# Import Extended Metrics
+# 7/13/2017 - Plot Weekly or Monthly Totals
 ################################################
 
 install.packages("tm")
 library(tm)
+library(ggplot2)
+library(scales)
 
-# read from sharefile and clean.
+# read from sharefile, clean, transform, calculate columns
 file_loc <- "\\\\cewp1650\\Chris Jabr Reports\\Extended Metrics.csv"
 x <- read.csv(file_loc, header = TRUE)
+
+# clean/transform
 colnames(x)[1] <- "id"
-head(x)
-str(x)
 x$Title <- as.character(x$Title)
-x.1 <- x[,c("id","Title")]
+x$Created_Date <- as.Date(x$Created_Date, "%m/%d/%Y")
+x$Resolved_Date <- as.Date(x$Resolved_Date, "%m/%d/%Y")
+
+# Create Week / Month "variables" 
+x$Created_Week_R <- as.Date(cut(x$Created_Date, breaks = "week"))
+x$Created_Month_R <- as.Date(cut(x$Created_Date, breaks = "month"))
+
+ggplot(x, aes(Created_Month_R, Open_To_Resolve_Time__M_))+ 
+  stat_summary(fun.y = sum, geom = "bar")+
+  scale_x_date(labels = date_format("%Y-%m"), breaks = "1 month")
 
 
-corp <- Corpus(DataframeSource(x.1))
-dtm <- DocumentTermMatrix(corp)
+
+# Count
+ggplot(x, aes(Created_Month_R))+
+  geom_bar()
+
+# Sum
+ggplot(x, aes(Created_Month_R, Open_To_Resolve_Time__M_))+
+  stat_summary(fun.y = "sum", geom = "bar")
+
+# Avg
+ggplot(x, aes(Created_Month_R, Open_To_Resolve_Time__M_))+
+  stat_summary(fun.y = "mean", geom = "bar")
+
+
+ggplot(x, aes(Created_Month_R, Open_To_Resolve_Time__M_))+
+  stat_summary(fun.y = "sum", geom = "bar")+
+  scale_x_date(date_breaks = "4 month")
+
+# text mine as corpus
+# x.1 <- x[,c("id","Title")]
+# corp <- Corpus(DataframeSource(x.1))
+# dtm <- DocumentTermMatrix(corp)
 
 
 
@@ -72,3 +104,5 @@ df.txt1 <- data.frame(DATA, freqs, check.names = FALSE)
 ords <- rev(sort(colSums(freqs)))[1:9] #top 9 words 
 top9 <- freqs[, names(ords)] #grab those columns from freqs
 data.frame(DATA, top9, check.names = FALSE) #put it together
+
+
