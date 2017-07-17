@@ -1,0 +1,21 @@
+{
+    "collab_server" : "",
+    "contents" : "# Cbind example. Getting column flags and appending (cbinding) them to the orig dataframe\n\ncbind(1,1:5)\ncbind(c(\"a\",\"b\",\"c\"),1:3)\n\nd <- as.data.frame(cbind(c(\"a\",\"b\",\"c\"),1:3))\n\nsapply(d[2],function(i){switch(i, i==1, \"is one\",2=\"is two\",3=\"is 3\")})\n\nflags <- sapply(d[2],function(i){ifelse(i==1, 1,0)})\n\ncbind(d,flags)\n\n\n\n# Synonym code\n# cbind treats as matrix; data.frame as DF -> char will be factors.\ndf2 <- cbind(df.txt1[1:5],df2)\ndf2 <- data.frame(df.txt1[1:5],df2)\n\n\n\n\n########################################################################\n#### online examples\n########################################################################\n\n## Creating flags from column values, and replacing the orig columns\ndatwe <- data.frame(replicate(37,sample(c(1,2,99),10,rep=TRUE)))\n\n#convert to Yes/No\nres <- as.data.frame(\n  sapply(datwe[,23:37], function(i)\n    ifelse(i==1, \"Yes\",\n           ifelse(i==2, \"No\",\n                  ifelse(i==99,NA,\"Name itttt\")))))\n\n\n\n#update dataframe\ndatwe <- cbind(datwe[, 1:22],res)\n\n#output, just showing first 2 columns\ndatwe[,23:24]\n\n\n\n\n\n## Word frequency by row\n\nDATA \ndput(head(DATA))\n\nfreqs <- t(wfm(DATA$state, 1:nrow(DATA))) \n# Data frame with all word counts\ndf.txt1 <- data.frame(DATA, freqs, check.names = FALSE) \n\n# Data frame with top 9 word counts\nords <- rev(sort(colSums(freqs)))[1:9] #top 9 words \ntop9 <- freqs[, names(ords)] #grab those columns from freqs\nDATA.top9 <- data.frame(DATA, top9, check.names = FALSE) #put it together\n\n########################################################################\n#### END online examples\n########################################################################\n\n\n",
+    "created" : 1500069174723.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "212902047",
+    "id" : "286E43D5",
+    "lastKnownWriteTime" : 1500077370,
+    "last_content_update" : 1500077370993,
+    "path" : "C:/Work/Git/Repos/R-TextMine/code examples.R",
+    "project_path" : "code examples.R",
+    "properties" : {
+        "tempName" : "Untitled1"
+    },
+    "relative_order" : 4,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}
