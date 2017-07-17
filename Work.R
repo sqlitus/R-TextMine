@@ -30,10 +30,12 @@ x$Resolved_Date <- as.Date(x$Resolved_Date, "%m/%d/%Y")
 x$Created_Week_R <- as.Date(cut(x$Created_Date, breaks = "week"))
 x$Created_Month_R <- as.Date(cut(x$Created_Date, breaks = "month"))
 
-ggplot(x, aes(Created_Month_R, Open_To_Resolve_Time__M_))+ 
-  stat_summary(fun.y = sum, geom = "bar")+
-  scale_x_date(labels = date_format("%Y-%m"), breaks = "1 month")
 
+function(not.working.date_format){
+ggplot(x, aes(Created_Month_R, Open_To_Resolve_Time__M_))+ 
+  stat_summary(fun.y = "sum", geom = "bar")+
+  scale_x_date(labels = date_format("%Y-%m"), breaks = "1 month")
+}
 
 
 # Count
