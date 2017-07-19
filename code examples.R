@@ -1,3 +1,51 @@
+
+#### Testing Nulls, NAs ####
+# 7/18/2017
+# quick test of sqldf
+
+x <- c(1,2,3)
+y <- c('abc','def',NA)
+as.data.frame(x,y)
+?as.data.frame
+?data.frame
+
+t <- data.frame(x,y)
+
+x.1 <- x
+y.1 <- c('abc',NA,'def')
+
+t.1 <- data.frame(x.1,y.1)
+library(sqldf)
+sqldf("select * from t where y is not null")
+
+
+# missing fields in csv are represented as NA, not NULL
+t.csv <- read.csv("C:\\Users\\2066074\\Documents\\test\\test_data_nulls_r.csv")
+
+sqldf("select * from [t.csv] where td1 is not null")
+
+
+
+# need to check evaluation of aggregates with nulls
+# https://stackoverflow.com/questions/8859124/na-values-using-sqldf
+mean(x)
+
+a <- c(1,2,NULL,3)
+mean(a)
+mean(c(1,2,NA,3))
+
+
+#### stuff ####
+
+
+
+
+
+
+
+
+
+
 # Cbind example. Getting column flags and appending (cbinding) them to the orig dataframe
 
 cbind(1,1:5)
@@ -64,5 +112,6 @@ DATA.top9 <- data.frame(DATA, top9, check.names = FALSE) #put it together
 ########################################################################
 #### END online examples
 ########################################################################
+
 
 
