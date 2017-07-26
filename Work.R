@@ -17,7 +17,7 @@ ipak(packages)
 
 
 # read from sharefile, clean, transform, calculate columns
-file_loc <- "\\\\cewp1650\\Chris Jabr Reports\\Extended Metrics.csv"
+file_loc <- "C:\\Users\\2066074\\Documents\\Extended Metrics 2017.csv"
 x <- read.csv(file_loc, header = TRUE)
 
 # clean/transform
@@ -26,10 +26,18 @@ x$Title <- as.character(x$Title)
 x$Created_Date <- as.Date(x$Created_Date, "%m/%d/%Y")
 x$Resolved_Date <- as.Date(x$Resolved_Date, "%m/%d/%Y")
 
-# Create Week / Month "variables" 
+# Created/Resolved Week / Month "variables" 
 x$Created_Week_R <- as.Date(cut(x$Created_Date, breaks = "week"))
 x$Created_Month_R <- as.Date(cut(x$Created_Date, breaks = "month"))
+x$Resolved_Week_R <- as.Date(cut(x$Resolved_Date, breaks = "week"))
+x$Resolved_Month_R <- as.Date(cut(x$Resolved_Date, breaks = "month"))
 
+# month figure for coloring
+x$created_month <- month
+
+
+# slice - just OnePOS Incidents
+x <- sqldf("select * from [x] where ONEPOS_LIST = 1")
 
 function(not.working.date_format){
 ggplot(x, aes(Created_Month_R, Open_To_Resolve_Time__M_))+ 
@@ -38,6 +46,9 @@ ggplot(x, aes(Created_Month_R, Open_To_Resolve_Time__M_))+
 }
 
 
+
+
+#### Part 1 - Basic Bar Plots; Colors ####
 # Count
 ggplot(x, aes(Created_Month_R))+
   geom_bar()
@@ -51,16 +62,57 @@ ggplot(x, aes(Created_Month_R, Open_To_Resolve_Time__M_))+
   stat_summary(fun.y = "mean", geom = "bar")
 
 
+# test - label intervals
 ggplot(x, aes(Created_Month_R, Open_To_Resolve_Time__M_))+
   stat_summary(fun.y = "sum", geom = "bar")+
-  scale_x_date(date_breaks = "4 month")
+  scale_x_date(date_breaks = "2 month")
+
+
+## Custom colors
+
+# border / fill
+ggplot(x, aes(Created_Month_R))+
+  geom_bar(color = "blue", fill = rgb(.1,.4,.5,.3))
+
+# hue
+ggplot(x, aes(Created_Month_R))+ # fill = as.factor(Created_Month_R)
+  geom_bar()+scale_fill_hue(c = 11)
+
+
+#### Part 2 - Stacked / Grouped bars ####
+# Stacked Bar
+ggplot(x, aes(x = Created_Week_R, fill = Priority))+
+  geom_bar()
+
+# Stacked Percent
+ggplot(x, aes(x = Created_Week_R, fill = Priority))+
+  geom_bar(position = "fill")
+
+# Grouped Bar
+ggplot(x, aes(x = Created_Week_R, fill = Priority))+
+  geom_bar(position = "dodge")
+
+# Add RcolorBrewer
+ggplot(x, aes(x = Created_Week_R, fill = Priority))+
+  geom_bar(position = "fill") + scale_fill_brewer(palette = "Pastel1")
+
+# Faceting
+ggplot(x, aes(x = Created_Week_R, fill = Priority))+
+  geom_bar()+facet_wrap(~Last_SG_Grouping)
+
+
+
+# test - plot avg resolve time by month, facet by support group
+ggplot(x, aes(x = Created_Month_R, y = Open_To_Resolve_Time__M_, color = Created_Month_R))+
+  stat_summary(fun.y = "mean", geom = "bar")+
+  facet_wrap(~Last_SG_Grouping)
+
+
 
 # text mine as corpus
 # x.1 <- x[,c("id","Title")]
 # corp <- Corpus(DataframeSource(x.1))
 # dtm <- DocumentTermMatrix(corp)
-
-
 
 
 ################################################
