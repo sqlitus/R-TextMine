@@ -1,4 +1,59 @@
 
+# 8/24/2017 notes
+
+colnames(em)
+
+
+# choose file with browser
+myFile <- file.choose()
+myData  <- read.table(myFile,header=TRUE)
+
+
+# turn rownames into dataframe column
+em.dtm.m.df <- data.frame(names = row.names(em.dtm.m), em.dtm.m)
+identical(em$Id, em.dtm.m.df$names)
+
+
+
+
+
+
+
+
+
+
+# text mining vignette
+
+data("crude")
+tdm <- TermDocumentMatrix(crude,
+                          control = list(removePunctuation = TRUE,
+                                         stopwords = TRUE))
+dtm <- DocumentTermMatrix(crude,
+                          control = list(weighting =
+                                           function(x)
+                                             weightTfIdf(x, normalize =
+                                                           FALSE),
+                                         stopwords = TRUE))
+inspect(tdm[202:205, 1:5])
+inspect(tdm[c("price", "prices", "texas"), c("127", "144", "191", "194")])
+inspect(dtm[1:5, 273:276])
+
+s <- SimpleCorpus(VectorSource(unlist(lapply(crude, as.character))))
+m <- TermDocumentMatrix(s,
+                        control = list(removeNumbers = TRUE,
+                                       stopwords = TRUE,
+                                       stemming = TRUE))
+inspect(m[c("price", "texa"), c("127", "144", "191", "194")])
+
+
+
+
+
+
+
+
+
+
 #### Testing Nulls, NAs ####
 # 7/18/2017
 # quick test of sqldf
