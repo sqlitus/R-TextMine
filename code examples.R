@@ -1,3 +1,17 @@
+# 8/26/2017
+
+# text mining resources
+function(TM_RESOURCES){
+  # https://stackoverflow.com/questions/25551514/termdocumentmatrix-errors-in-r
+  # https://stackoverflow.com/questions/32225770/r-tm-removewords-function-not-removing-words
+}
+
+
+
+# need to learn more about: regex, tm mapping, etc
+
+install.packages("swirl")
+
 
 # 8/24/2017 notes
 
