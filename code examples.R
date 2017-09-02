@@ -1,3 +1,20 @@
+function(TM_PERSONALNOTES){
+  # smarter import 
+    # choose file
+    # smart 1st column -> strip weird characters (substr(ï..))
+    # choose what columns you want?
+    # maybe convert all column names to lowercase
+    # more consistent factoring...
+  
+  # smarter processing
+    # gsub on corpus - not before
+    # separate scripts -> source scripts for packages, import, processing (blacklist etc), etc
+    # consolidate similar words!!!
+  
+  # choose export name + location
+    
+}
+
 # 8/26/2017
 
 # text mining resources
