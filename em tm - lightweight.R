@@ -1,8 +1,10 @@
 ################################################
-# Text mining - Extended Metrics CSV - Long DTM - quick script
+# Text mining - Extended Metrics CSV - Long DTM - quick script for 1 week's analysis
 # 9/2/2017
 ################################################
 
+
+setwd("\\\\cewp1650\\Chris Jabr Reports\\Text Analysis")
 #### Packages & Version Control ####
 
   ipak <- function(pkg){
@@ -19,10 +21,9 @@
 
 #### IMPORT & CLEAN DATA ####
   
-  em <- read.csv("C:\\Work\\zRequests\\Lori\\IRs by Region and Store\\Extended Metrics 7-17 to 8-28.csv")
+  em <- read.csv("\\\\cewp1650\\Chris Jabr Reports\\Extended Metrics 2017.csv")
   colnames(em)[1] <- "Id"
   em$Title <- as.character(em$Title)
-  em$Description <- as.character(em$Description)
   em$Smart_Region <- as.factor(em$Smart_Region)
   em$Created_Date <- as.Date(em$Created_Date, "%m/%d/%Y")
 
@@ -35,7 +36,7 @@
                     "Description", 	"Smart_Region", 	"Smart_Location", "StoreNumber", 	
                     "LaneAffected", 	"Created_Week", "LAST_ASSIGNED", 	"Incident_Type")
   em <- em[,which(names(em) %in% keep.columns)]
-  em <- subset(em, Created_Date >= "2017-07-01")
+  em <- subset(em, Created_Date >= Sys.Date() - 10)
 
 
 #### Gsub dataframe ####
@@ -47,14 +48,16 @@
   
   em.corpus <- VCorpus(DataframeSource(em), 
                        readerControl = list(reader = readTabular(mapping = 
-                                                                   list(content = "Title", id = "Id", Location = "Smart_Location"))))
+                                                                   list(content = "Title", 
+                                                                        id = "Id", 
+                                                                        Location = "Smart_Location"))))
 
   # lowercase
   em.corpus <- tm_map(em.corpus, content_transformer(tolower))
   
   # remove words
   em.corpus <- tm_map(em.corpus, content_transformer(removeWords), stopwords(kind = "SMART"))
-  word.blacklist <- c("r10", "lane", "bus", "date", "ncr", "eod", "run", "lanes")
+  word.blacklist <- c("r10", "lane", "bus", "date", "ncr", "eod", "run", "lanes", "reg")
   em.corpus <- tm_map(em.corpus, content_transformer(removeWords), word.blacklist)
   
   # Whitespace + Stemming
@@ -80,6 +83,14 @@
                             ,[em].*
                             from [em.tidy.dtm] join [em] on [em.tidy.dtm].document = [em].Id")
   
-  write.csv(em.tidy.dtm.full, file = "IRs by Region and Store - text analysis v2.csv", row.names = FALSE)
+  # export analysis and stopword list
+  write.csv(em.tidy.dtm.full, 
+            file = paste("Text Analysis - ", Sys.Date(), ".csv", sep = ""), 
+            row.names = FALSE)
+  
+  full.word.exclusion.list <- c(word.blacklist, stopwords(kind = "SMART"))
+  write.csv(full.word.exclusion.list, 
+            file = paste("stopwords - ", Sys.Date(), ".csv", sep = ""), 
+            row.names = FALSE)
   
 # End
