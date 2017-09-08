@@ -1,5 +1,5 @@
 ################################################
-# Text mining - Extended Metrics CSV - Long DTM - quick script for 1 week's analysis
+# Text mining - Extended Metrics CSV - Long DTM - Title - quick script for 1 week's analysis
 # 9/2/2017
 ################################################
 
@@ -37,6 +37,7 @@ setwd("\\\\cewp1650\\Chris Jabr Reports\\Text Analysis")
                     "LaneAffected", 	"Created_Week", "LAST_ASSIGNED", 	"Incident_Type")
   em <- em[,which(names(em) %in% keep.columns)]
   em <- subset(em, Created_Date >= Sys.Date() - 10)
+  ### dynamically cut to last week ###
 
 
 #### Gsub dataframe ####
@@ -90,7 +91,7 @@ setwd("\\\\cewp1650\\Chris Jabr Reports\\Text Analysis")
   
   full.word.exclusion.list <- c(word.blacklist, stopwords(kind = "SMART"))
   write.csv(full.word.exclusion.list, 
-            file = paste("stopwords - ", Sys.Date(), ".csv", sep = ""), 
+            file = paste("removed words - ", Sys.Date(), ".csv", sep = ""), 
             row.names = FALSE)
   
 # End

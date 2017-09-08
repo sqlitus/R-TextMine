@@ -1,3 +1,13 @@
+ipak <- function(pkg){
+  new.pkg <- pkg[!(pkg %in% installed.packages()[, "Package"])]
+  if (length(new.pkg)) 
+    install.packages(new.pkg, dependencies = TRUE)
+  sapply(pkg, require, character.only = TRUE)
+}
+# ipak("checkpoint")
+# checkpoint("2017-08-24")
+ipak(c("ggplot2", "tm", "sqldf", "scales","chron", "tidytext", "tidyr"))
+
 function(TM_PERSONALNOTES){
   # smarter import 
     # choose file
@@ -14,6 +24,49 @@ function(TM_PERSONALNOTES){
   # choose export name + location
     
 }
+function(MORE_IMPROVEMENTS){
+  
+  
+  
+  # r formula to always get last business week
+  last.monday <- (Sys.Date() - 7) + ( 1 - as.integer(format(Sys.Date(), format = "%u")))
+  last.sunday <- (Sys.Date() - 7) + ( 7 - as.integer(format(Sys.Date(), format = "%u")))
+  
+  # FILENAME = Text Analysis - [min] to [max]
+  paste("Text Analysis - ", last.monday, " to ", last.sunday, sep = "")
+  
+}
+function(ggplot_references){
+  # https://stackoverflow.com/questions/33613385/sort-bar-chart-by-sum-of-values-in-ggplot
+  # stacked ordered bar - https://stackoverflow.com/questions/21596906/ggplot-how-to-limit-output-in-bar-plot-so-only-most-frequent-occurrences-are-sh
+  
+}
+
+
+#### em tm plotting - sorting and top 10 ####
+
+
+ggplot(data=em.tidy.dtm.full, aes(x=reorder(term, flag, function(x){sum(x)}), y=flag)) +
+  geom_bar(stat="summary", fun.y=sum) +
+  coord_flip()
+
+ggplot(data=em.tidy.dtm.full, aes(x=reorder(term, flag, sum), y=flag)) +
+  geom_bar(stat="summary", fun.y=sum) #+
+  # coord_flip()
+
+
+# aggregate 1 col grouped by another
+aggregate(em.tidy.dtm.full$flag, by = list(em.tidy.dtm.full$term), FUN = sum)
+
+aggregate(em.tidy.dtm.full$flag, list(em.tidy.dtm.full$term), sum)
+
+
+# plot top x words; ggplot order
+topwords <- sqldf("select term, count(*) as 'count' from [em.tidy.dtm.full] 
+                  group by term order by count(*) desc limit 20")
+ggplot(topwords, aes(reorder(term, -count), count))+geom_bar(stat = 'identity')
+
+
 
 
 
