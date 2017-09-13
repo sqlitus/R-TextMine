@@ -5,6 +5,7 @@
 
 
 setwd("\\\\cewp1650\\Chris Jabr Reports\\Text Analysis")
+
 #### Packages & Version Control ####
 
   ipak <- function(pkg){
@@ -18,6 +19,8 @@ setwd("\\\\cewp1650\\Chris Jabr Reports\\Text Analysis")
   # checkpoint("2017-08-24")
   ipak(c("ggplot2", "tm", "sqldf", "scales","chron", "tidytext", "tidyr"))
 
+  last.monday <- (Sys.Date() - 7) + ( 1 - as.integer(format(Sys.Date(), format = "%u")))
+  last.sunday <- (Sys.Date() - 7) + ( 7 - as.integer(format(Sys.Date(), format = "%u")))
 
 #### IMPORT & CLEAN DATA ####
   
@@ -36,8 +39,8 @@ setwd("\\\\cewp1650\\Chris Jabr Reports\\Text Analysis")
                     "Description", 	"Smart_Region", 	"Smart_Location", "StoreNumber", 	
                     "LaneAffected", 	"Created_Week", "LAST_ASSIGNED", 	"Incident_Type")
   em <- em[,which(names(em) %in% keep.columns)]
-  em <- subset(em, Created_Date >= Sys.Date() - 10)
-  ### dynamically cut to last week ###
+  em <- subset(em, Created_Date >= last.monday)
+  em <- subset(em, Created_Date <= last.sunday)
 
 
 #### Gsub dataframe ####
