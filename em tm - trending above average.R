@@ -2,6 +2,7 @@
 # Text mining - Extended Metrics CSV - Long DTM - Title
 # finding average word trend rates per week - and top trending words
 # 9/2/2017
+# (REFACTORING)
 ################################################
 
 
