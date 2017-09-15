@@ -1,6 +1,9 @@
 
 
-#### text mining jane austin ####
+
+  
+
+#### Text mining in R ch1.4 - text mining jane austin ####
 
 library(dplyr, tidytext)
 text_df <- data_frame(line = 1:4, text = text)

@@ -12,8 +12,7 @@
     # Stores IRs Lanes
       # scatterplot all stores, by IRs created / Lanes / IRs Lane. Shiny/markdown/plotly
   }
-
-function(TM_PERSONALNOTES){
+  function(TM_PERSONALNOTES){
   # smarter import 
   # choose file
   # smart 1st column -> strip weird characters (substr(ï..))
@@ -52,22 +51,90 @@ x$created_month <- month
 # slice - just OnePOS Incidents
 x <- sqldf("select * from [x] where ONEPOS_LIST = 1")
 
-function(not.working.date_format){
-  ggplot(x, aes(Created_Month_R, Open_To_Resolve_Time__M_))+ 
-    stat_summary(fun.y = "sum", geom = "bar")+
-    scale_x_date(labels = date_format("%Y-%m"), breaks = "1 month")
-}
 
-#### end data ####
 
-#### 9/13/2017 - ggplotly hover over info ####
-
+#### Package Function ####
 ipak <- function(pkg){
   new.pkg <- pkg[!(pkg %in% installed.packages()[, "Package"])]
   if (length(new.pkg)) 
     install.packages(new.pkg, dependencies = TRUE)
   sapply(pkg, require, character.only = TRUE)
 }
+# ipak("checkpoint")
+# checkpoint("2017-08-24")
+ipak(c("ggplot2", "tm", "sqldf", "scales","chron", "tidytext", "tidyr","dplyr","plotly","tidyverse"))
+
+#### 9/15/2017 - REGEX, strings, the R book ####
+
+
+grep("206", em$Title)
+regexpr("206",em$Title[14])
+regexpr("206", em$Title)
+regexpr("Lane", em$Title)
+
+
+substr(em$Title[14], regexpr("206", em$Title[14]), regexpr("206", em$Title[14]) + 2)
+regmatches(em$Title, regexpr("206", em$Title[14]))
+
+em %>% filter(grepl("206", em$Title)) %>% select(Title)
+as.vector(em %>% filter(grepl("206", em$Title)) %>% select(Title))
+
+
+## Regex Detection
+
+regex.em <- em %>% filter(grepl("^C", em$LAST_ASSIGNED)) %>% arrange(LAST_ASSIGNED) %>% select(LAST_ASSIGNED)
+regex.em <- em %>% filter(grepl(" *C", em$LAST_ASSIGNED)) %>% arrange(LAST_ASSIGNED) %>% select(LAST_ASSIGNED)
+regex.em <- em %>% filter(grepl("y$", em$LAST_ASSIGNED)) %>% arrange(LAST_ASSIGNED) %>% select(LAST_ASSIGNED)
+regex.em <- em %>% filter(grepl("[HJ]", em$LAST_ASSIGNED)) %>% arrange(LAST_ASSIGNED) %>% select(LAST_ASSIGNED)
+
+# first letter
+regex.em <- em %>% filter(grepl("^[HJ]", em$LAST_ASSIGNED)) %>% arrange(LAST_ASSIGNED) %>% select(LAST_ASSIGNED)
+
+# find last letter, inverse(grepl), exclude last letter
+regex.em <- em %>% filter(grepl("[a-zA-Z]$", em$LAST_ASSIGNED)) %>% arrange(LAST_ASSIGNED) %>% select(LAST_ASSIGNED)
+regex.em <- em %>% filter(!grepl("[a-zA-Z]$", em$LAST_ASSIGNED)) %>% arrange(LAST_ASSIGNED) %>% select(LAST_ASSIGNED)
+regex.em <- em %>% filter(grepl("[^a-zA-Z]$", em$LAST_ASSIGNED)) %>% arrange(LAST_ASSIGNED) %>% select(LAST_ASSIGNED)
+
+# find H at beg of word. End of word.
+regex.em <- em %>% filter(grepl("\\<[Hh]", em$LAST_ASSIGNED)) %>% arrange(LAST_ASSIGNED) %>% select(LAST_ASSIGNED)
+regex.em <- em %>% filter(grepl("[Hh]\\>", em$LAST_ASSIGNED)) %>% arrange(LAST_ASSIGNED) %>% select(LAST_ASSIGNED)
+
+# chars at position
+regex.em <- em %>% filter(grepl("^.[eo]", em$LAST_ASSIGNED)) %>% arrange(LAST_ASSIGNED) %>% select(LAST_ASSIGNED)
+regex.em <- em %>% filter(grepl("^.{1}[eo]", em$LAST_ASSIGNED)) %>% arrange(LAST_ASSIGNED) %>% select(LAST_ASSIGNED)
+
+# match exactly X times, between X and Y times, at most/least X characters, 
+regex.em <- em %>% filter(grepl("^.{5}[eo]", em$LAST_ASSIGNED)) %>% arrange(LAST_ASSIGNED) %>% select(LAST_ASSIGNED)
+regex.em <- em %>% filter(grepl("^.{10,22}$", em$LAST_ASSIGNED)) %>% arrange(LAST_ASSIGNED) %>% select(LAST_ASSIGNED)
+regex.em <- em %>% filter(grepl("^.{,10}$", em$LAST_ASSIGNED)) %>% arrange(LAST_ASSIGNED) %>% select(LAST_ASSIGNED)
+regex.em <- em %>% filter(grepl("^.{28,}$", em$LAST_ASSIGNED)) %>% arrange(LAST_ASSIGNED) %>% select(LAST_ASSIGNED)
+
+
+## Substitution - sub/gsub - replace 3 digit number with string, replace first characters... ##
+gsub("[^0-9][0-9][0-9][0-9][^0-9]", "(NUMBERS WERE HERE)", em$Title)
+gsub("^.", "(first letter)", em$Title)
+
+## Location - regexpr/gregexpr - location of regex in vector
+regexpr("[Ll][Aa][Nn][Ee]", em$Title)
+
+# %in% - MUST BE PERFECT MATCH. regex / grep - for natural wildcard matching
+which(em$Title %in% c("Office"))
+em$Title[grep("Office", em$Title)]
+
+# escaping characters
+grepl("\\(", em$LAST_ASSIGNED)
+em$LAST_ASSIGNED[-grep("\\(", em$LAST_ASSIGNED)]
+gsub("[[:punct:]]", "(there was punct here", em$Incident_Type)
+em$Incident_Type[grep("[[:punct:]]", em$Incident_Type)]
+
+# OR matching
+em$Title[grep("MSR|pass[^A-z]", em$Title)]
+
+
+
+#### 9/13/2017 - ggplotly hover over info ####
+
+
 
 
 ipak(c("ggplot2", "tm", "sqldf", "scales","chron", "tidytext", "tidyr","dplyr","plotly","tidyverse"))
@@ -166,7 +233,7 @@ function(ggplot_references){
 }
 
 
-#### em tm plotting - sorting and top 10 ####
+#### (old) em tm plotting - sorting and top 10 ####
 
 
 ggplot(data=em.tidy.dtm.full, aes(x=reorder(term, flag, function(x){sum(x)}), y=flag)) +
