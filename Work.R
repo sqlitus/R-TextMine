@@ -64,6 +64,30 @@ ipak <- function(pkg){
 # checkpoint("2017-08-24")
 ipak(c("ggplot2", "tm", "sqldf", "scales","chron", "tidytext", "tidyr","dplyr","plotly","tidyverse"))
 
+
+#### 9/20/2017 - date arithmatic - week ending; SQL LIKE equivalent (which) ####
+
+library(lubridate)
+
+test <- em %>% select(Id, Created_Date, Created_Week)
+test$next.sunday <- as.Date(ceiling_date(test$Created_Date, unit = "week"))
+
+test$cweek <- as.Date(cut(test$Created_Date, breaks = "week"))+1
+
+test2 <- seq(as.Date("2016-12-25"), by = "days", length.out = 80)
+test2 <- as.data.frame(test2)
+test2$week.start <- as.Date(cut.Date(test2$test2, breaks = "week"))
+test2$week.end <- as.Date(cut.Date(test2$test2, breaks = "week"))
+test2$week.start.2 <- floor_date(test2$test2, unit = "week")
+test2$week.end.2 <- ceiling_date(test2$test2, unit = "week")
+test2$next.monday <- (test2$test2 + 7) + ( 1 - as.integer(format(test2$test2, format = "%u")))
+test2$next.sunday <- test2$test2 + ( 7 - as.integer(format(test2$test2, format = "%u")))
+
+
+## SQL like equivalent
+em.lastweek[which(str_detect(em.lastweek$term, "ST")),]
+
+
 #### 9/15/2017 - REGEX, strings, the R book ####
 
 
@@ -151,30 +175,59 @@ pp=plotly_build(p)
 ### region not displaying correctly???? mytext??? ###
 
 
-#### 9/13/2017 - word stemming 2.0 - custom list of words to group together ####
+#### 9/13/2017 - word stemming 2.0 - consolidate worod stems w/ custom list ####
 
 
 
-# stemmed words list -> to combine to common term
-test.words <- c("freeze","freezes","freezing","froze","frozed","frozen")
-stemDocument(test.words)
+  # stemmed words list -> to combine to common term
+  test.words <- c("freeze","freezes","freezing","froze","frozed","frozen",
+                  "transact", "transaction", "TRANSACTIONS", "issue", "ISsueS", "issued", "issuer",
+                  "Lane", "lanes", "after two   lanes  and a lane  ")
+  test.remove.words <- "lane"
 
-freeze.synonyms <- list(
-  list(word="freeze issues", syns=c("freez","froze","frozen"))
-)
+  stemDocument(test.words)
+  
+  freeze.synonyms <- list(
+    list(word="(freeze issues)", syns=c("freez","froze","frozen"))
+  )
+  
+  replaceSynonymsFreeze <- content_transformer(function(x,syn=NULL){
+    Reduce(function(a,b){
+      gsub(paste0("\\b(", paste(b$syns, collapse = "|"),")\\b"), b$word, a)
+    }, syn, x)
+  })
+  
+  test.tm <- Corpus(VectorSource(test.words))
+  test.tm <- tm_map(test.tm, tolower)
+  test.tm <- tm_map(test.tm, stemDocument)
+  test.tm <- tm_map(test.tm, replaceSynonymsFreeze, freeze.synonyms)
+  inspect(test.tm)
+  
+  more.synonyms <- list(
+    list(word="(issue issues)", syns=c("issu", "issuer"))
+  )
+  
+  test.tm <- tm_map(test.tm, replaceSynonymsFreeze, more.synonyms)
+  inspect(test.tm)
 
-replaceSynonymsFreeze <- content_transformer(function(x,syn=NULL){
-  Reduce(function(a,b){
-    gsub(paste0("\\b(", paste(b$syns, collapse = "|"),")\\b"), b$word, a)
-  }, syn, x)
-})
+  ### also figure method for tidytext stem replacement ###
 
-test.tm <- Corpus(VectorSource(test.words))
-test.tm <- tm_map(test.tm, stemDocument)
-test.tm <- tm_map(test.tm, replaceSynonymsFreeze, freeze.synonyms)
-inspect(test.tm)
-
-
+  test <- data.frame(words = test.words)
+  test$words <- as.character(test$words)
+  test
+  test$words <- removeWords(test$words, test.remove.words)
+  test
+  # remove words before unnesting tokens (but after lowercase etc) for better performance prob.
+  
+  # tokenize, tolower, stripwhitespace default, then manually stem / remove stopwords
+  test.tidy <- test %>%
+    unnest_tokens(word, words, drop = F) %>%
+    mutate(word = stemDocument(word)) %>%
+    mutate(word = removeWords(word, test.remove.words)) %>%
+    filter(!(word == ""))
+  test.tidy
+  
+  
 # excellent stemming reference - including dictionary word corrections
 # https://stackoverflow.com/questions/24443388/stemming-with-r-text-analysis
 

@@ -92,9 +92,9 @@ setwd("\\\\cewp1650\\Chris Jabr Reports\\Text Analysis")
             file = paste("Text Analysis - ", Sys.Date(), ".csv", sep = ""), 
             row.names = FALSE)
   
-  full.word.exclusion.list <- c(word.blacklist, stopwords(kind = "SMART"))
-  write.csv(full.word.exclusion.list, 
-            file = paste("removed words - ", Sys.Date(), ".csv", sep = ""), 
-            row.names = FALSE)
+  # full.word.exclusion.list <- c(word.blacklist, stopwords(kind = "SMART"))
+  # write.csv(full.word.exclusion.list, 
+  #           file = paste("removed words - ", Sys.Date(), ".csv", sep = ""), 
+  #           row.names = FALSE)
   
 # End
