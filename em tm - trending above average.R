@@ -18,7 +18,7 @@ ipak <- function(pkg){
 
 # ipak("checkpoint")
 # checkpoint("2017-08-24")
-ipak(c("ggplot2", "tm", "sqldf", "scales","chron", "tidytext", "tidyr","dplyr","stringr"))
+ipak(c("ggplot2", "tm", "sqldf", "scales","chron", "tidytext", "tidyr","dplyr","stringr", "plotly"))
 
 startweek.2017 <- as.Date("2017-01-02")
 last.monday <- (Sys.Date() - 7) + ( 1 - as.integer(format(Sys.Date(), format = "%u")))
@@ -92,12 +92,13 @@ em.tidy.dtm.full <- sqldf("select [em.tidy.dtm].term
 options(scipen = 999)
 
 em.tidy.dtm.full <- em.tidy.dtm.full %>%
-  mutate(num.weeks = n_distinct(Created_Week)) %>%
+    mutate(num.weeks = n_distinct(Created_Week)) %>%
   group_by(Created_Week, term) %>%
     mutate(word.week.total = n()) %>%
   group_by(term) %>%
-    mutate(word.total = n()) %>%
-    mutate(word.weekly.avg = n()/num.weeks)
+    mutate(word.population.total = n()) %>%
+    mutate(word.weekly.avg = n()/num.weeks) %>%
+    mutate(word.trend = word.week.total / word.weekly.avg)
 
 
 # filter & visualize words significantly above their averages for a week
@@ -105,15 +106,41 @@ em.tidy.dtm.full <- em.tidy.dtm.full %>%
 two.mondays.ago <- (Sys.Date() - 14) + ( 1 - as.integer(format(Sys.Date(), format = "%u")))
 em.last.2.weeks <- em.tidy.dtm.full %>%
   filter(Created_Date >= two.mondays.ago & Created_Date <= last.sunday) %>%
-  arrange(desc(word.weekly.avg))
+  filter(word.week.total >= 5) %>%
+  arrange(desc(word.trend))
 
 
+# top 10 words each week
+  test <- em.last.2.weeks %>%
+    group_by(Created_Week) %>%
+      count(term, sort = TRUE) %>%
+      top_n(10, wt = n) %>%
+    ungroup() %>%
+      mutate(word.order = nrow(.):1, word.order2 = 1:nrow(.))
+  
+  test.p <- ggplot(test, aes(reorder(term, word.order), n, fill = Created_Week))+
+    geom_bar(stat = "identity") +
+    facet_wrap(~Created_Week, scales = "free_y") + # scales arg necessary to hav diff words faceted correctly
+    labs(x = "Word", y = "Frequency", title = "Most Common Words by Week") +
+    coord_flip() +
+    theme(legend.position = "none") 
+  
+  ggplot(test, aes(reorder(term, word.order, order = TRUE), n, fill = Created_Week))+
+    geom_bar(stat = "identity") +
+    facet_wrap(~Created_Week, scales = "free_y") + # scales arg necessary to hav diff words faceted correctly
+    labs(x = "Word", y = "Frequency", title = "Most Common Words by Week") +
+    coord_flip() +
+    theme(legend.position = "none") 
+    
+  test.p
+  ggplotly(test.p)
 
 # write.csv(em.last.2.weeks, 
 #           file = paste("last 2 weeks - ", Sys.Date(), ".csv", sep = ""), 
 #           row.names = FALSE)
 
 
+  
 #tidytext equivalent...
 # consolidate stems
   # mutate(word = if_else(word %in% c("emailing", "emails"), "email", word))

@@ -175,7 +175,7 @@ pp=plotly_build(p)
 ### region not displaying correctly???? mytext??? ###
 
 
-#### 9/13/2017 - word stemming 2.0 - consolidate worod stems w/ custom list ####
+#### 9/13/2017 - 9/20/2017 - word stemming 2.0 - consolidate worod stems w/ custom list ####
 
 
 
