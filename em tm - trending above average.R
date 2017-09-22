@@ -6,7 +6,7 @@
 ################################################
 
 
-setwd("\\\\cewp1650\\Chris Jabr Reports\\Text Analysis")
+
 #### Packages & Version Control ####
 
 ipak <- function(pkg){
@@ -116,25 +116,25 @@ em.last.2.weeks <- em.tidy.dtm.full %>%
       count(term, sort = TRUE) %>%
       top_n(10, wt = n) %>%
     ungroup() %>%
-      mutate(word.order = nrow(.):1, word.order2 = 1:nrow(.))
+      mutate(wordorder = nrow(.):1) %>%
+    group_by(Created_Week, term) %>%  # begin ridiculous workaround for ordering words in facets correctly
+      arrange(desc(n)) %>%
+    ungroup() %>%
+      mutate(ord.term = paste(Created_Week,"__",term, sep = ""))
   
-  test.p <- ggplot(test, aes(reorder(term, word.order), n, fill = Created_Week))+
-    geom_bar(stat = "identity") +
-    facet_wrap(~Created_Week, scales = "free_y") + # scales arg necessary to hav diff words faceted correctly
-    labs(x = "Word", y = "Frequency", title = "Most Common Words by Week") +
-    coord_flip() +
-    theme(legend.position = "none") 
-  
-  ggplot(test, aes(reorder(term, word.order, order = TRUE), n, fill = Created_Week))+
-    geom_bar(stat = "identity") +
-    facet_wrap(~Created_Week, scales = "free_y") + # scales arg necessary to hav diff words faceted correctly
-    labs(x = "Word", y = "Frequency", title = "Most Common Words by Week") +
-    coord_flip() +
-    theme(legend.position = "none") 
-    
-  test.p
-  ggplotly(test.p)
 
+  test.p <- ggplot(test, aes(reorder(ord.term, wordorder), n, fill = Created_Week))+
+    geom_bar(stat = "identity") +
+    facet_wrap(~Created_Week, scales = "free_y") + # scales arg necessary to hav diff words faceted correctly
+    labs(x = "Word", y = "Frequency", title = "Most Common Words by Week") +
+    coord_flip() +
+    theme(legend.position = "none") +
+    scale_x_discrete(labels = function(x) gsub("^.+__", "", x))
+
+  test.p
+
+  
+# setwd("\\\\cewp1650\\Chris Jabr Reports\\Text Analysis")
 # write.csv(em.last.2.weeks, 
 #           file = paste("last 2 weeks - ", Sys.Date(), ".csv", sep = ""), 
 #           row.names = FALSE)
