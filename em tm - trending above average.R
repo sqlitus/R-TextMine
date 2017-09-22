@@ -101,8 +101,9 @@ em.tidy.dtm.full <- em.tidy.dtm.full %>%
     mutate(word.trend = word.week.total / word.weekly.avg)
 
 
-# filter & visualize words significantly above their averages for a week
+#### ANALYTICAL DATASETS FOR VISUALIZATION ####
 
+# subset dataset
 two.mondays.ago <- (Sys.Date() - 14) + ( 1 - as.integer(format(Sys.Date(), format = "%u")))
 em.last.2.weeks <- em.tidy.dtm.full %>%
   filter(Created_Date >= two.mondays.ago & Created_Date <= last.sunday) %>%
@@ -110,8 +111,8 @@ em.last.2.weeks <- em.tidy.dtm.full %>%
   arrange(desc(word.trend))
 
 
-# top 10 words each week
-  test <- em.last.2.weeks %>%
+# analysis - top 10 words by count each week
+  top.10.words.weekly.count <- em.last.2.weeks %>%
     group_by(Created_Week) %>%
       count(term, sort = TRUE) %>%
       top_n(10, wt = n) %>%
@@ -120,20 +121,50 @@ em.last.2.weeks <- em.tidy.dtm.full %>%
     group_by(Created_Week, term) %>%  # begin ridiculous workaround for ordering words in facets correctly
       arrange(desc(n)) %>%
     ungroup() %>%
-      mutate(ord.term = paste(Created_Week,"__",term, sep = ""))
+      mutate(ord.term = paste(Created_Week,"__",term, sep = "")) %>%
+    group_by(term) %>%
+    mutate(word.frequency = n())
   
-
-  test.p <- ggplot(test, aes(reorder(ord.term, wordorder), n, fill = Created_Week))+
-    geom_bar(stat = "identity") +
-    facet_wrap(~Created_Week, scales = "free_y") + # scales arg necessary to hav diff words faceted correctly
-    labs(x = "Word", y = "Frequency", title = "Most Common Words by Week") +
-    coord_flip() +
-    theme(legend.position = "none") +
-    scale_x_discrete(labels = function(x) gsub("^.+__", "", x))
-
-  test.p
-
+    # plot - top 10 words by count each week
+    top.10.words.weekly.count.p <- top.10.words.weekly.count %>%
+      ggplot(aes(reorder(ord.term, wordorder), n, fill = term, size = word.frequency)) +
+        geom_bar(stat = "identity", color = "black") +
+        facet_wrap(~Created_Week, scales = "free_y") + # scales arg necessary to hav diff words faceted correctly
+        labs(x = "Word", y = "Frequency", title = "Most Common Words by Week") +
+        coord_flip() +
+        theme(legend.position = "none") +
+        scale_x_discrete(labels = function(x) gsub("^.+__", "", x))
+    top.10.words.weekly.count.p
   
+    
+    
+  # analysis - top 10 words by trending above average
+  top.10.words.trending.aa <- em.last.2.weeks %>%
+    group_by(Created_Week, term) %>%
+      summarize(word.trend = mean(word.trend), word.weekly.avg = mean(word.weekly.avg),
+                word.week.total = mean(word.week.total), word.population.total = mean(word.population.total),
+                word.population.total = mean(word.population.total), num.weeks = mean(num.weeks)) %>%
+      arrange(desc(word.trend)) %>%
+      top_n(10, wt = word.trend) %>%
+    ungroup() %>%
+      mutate(wordorder = nrow(.):1) %>%
+      mutate(ord.term = paste(Created_Week,"__",term, sep = "")) %>%
+    group_by(term) %>%
+      mutate(word.frequency = n())
+  
+    # plot - top 10 words by trending above average
+    top.10.words.trending.aa.p <- top.10.words.trending.aa %>% 
+      ggplot(aes(reorder(ord.term, wordorder), word.trend, fill = term))+
+        geom_bar(stat = "identity") +
+        facet_wrap(~Created_Week, scales = "free_y") + # scales arg necessary to hav diff words faceted correctly
+        labs(x = "Word", y = "Spike in Frequency", title = "Words Spiking in Frequency") +
+        coord_flip() +
+        theme(legend.position = "none") +
+      scale_x_discrete(labels = function(x) gsub("^.+__", "", x)) 
+    top.10.words.trending.aa.p
+  
+    
+    
 # setwd("\\\\cewp1650\\Chris Jabr Reports\\Text Analysis")
 # write.csv(em.last.2.weeks, 
 #           file = paste("last 2 weeks - ", Sys.Date(), ".csv", sep = ""), 
@@ -146,5 +177,6 @@ em.last.2.weeks <- em.tidy.dtm.full %>%
   # mutate(word = if_else(word %in% c("emailing", "emails"), "email", word))
   # test str replace ..
   # handle *MSR from MSR ... ... regex gsub keeping certain punct.....
-# slice - find top 10 words per week above their weekly average
-# plot - show their total frequency compared to normal... (same graph)
+
+# plot - case when word is repeated, BOLD or something.
+    # outline color thicker based on freq of word...size, scale didn't work, ggplot aes vs geom aes...
