@@ -80,6 +80,8 @@ test2$week.start <- as.Date(cut.Date(test2$test2, breaks = "week"))
 test2$week.end <- as.Date(cut.Date(test2$test2, breaks = "week"))
 test2$week.start.2 <- floor_date(test2$test2, unit = "week")
 test2$week.end.2 <- ceiling_date(test2$test2, unit = "week")
+
+# week ending formula
 test2$next.monday <- (test2$test2 + 7) + ( 1 - as.integer(format(test2$test2, format = "%u")))
 test2$next.sunday <- test2$test2 + ( 7 - as.integer(format(test2$test2, format = "%u")))
 
