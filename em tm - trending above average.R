@@ -5,7 +5,7 @@
 # (REFACTORING)
 ################################################
 
-
+setwd("\\\\cewp1650\\Chris Jabr Reports\\Text Analysis")
 
 #### Packages & Version Control ####
 
@@ -82,7 +82,7 @@ em.tidy.dtm <- tidy(em.dtm)
 em.tidy.dtm$flag <- ifelse(em.tidy.dtm$count > 0, 1, 0)
 em.tidy.dtm$term <- toupper(em.tidy.dtm$term)
 
-# join dtm to orig dataframe
+## Preprocessed dataset - join dtm to orig dataframe ##
 em.tidy.dtm.full <- sqldf("select [em.tidy.dtm].term
                             ,[em.tidy.dtm].flag
                             ,[em].*
@@ -92,7 +92,7 @@ em.tidy.dtm.full <- sqldf("select [em.tidy.dtm].term
 # calculate word averages by week; scientific notation off
 options(scipen = 999)
 
-em.tidy.dtm.full <- em.tidy.dtm.full %>%
+em.tidy.words.all <- em.tidy.dtm.full %>%
     mutate(num.weeks = n_distinct(Created_Week)) %>%
   group_by(Created_Week, term) %>%
     mutate(word.week.total = n()) %>%
@@ -104,11 +104,11 @@ em.tidy.dtm.full <- em.tidy.dtm.full %>%
 
 #### ANALYTICAL DATASETS FOR ANALYSIS & VISUALIZATION ####
 
-# subset dataset
+## subset dataset - last 2 weeks ##
 two.mondays.ago <- (Sys.Date() - 14) + ( 1 - as.integer(format(Sys.Date(), format = "%u")))
-em.last.2.weeks <- em.tidy.dtm.full %>%
+em.last.2.weeks <- em.tidy.words.all %>%
   filter(Created_Date >= two.mondays.ago & Created_Date <= last.sunday) %>%
-  filter(word.week.total >= 5) %>%
+  # filter(word.week.total >= 5) %>%   ## filter out uncommon words?
   arrange(desc(word.trend)) %>%
   mutate(Created_Week_Ending = Created_Date + ( 7 - as.integer(format(Created_Date, format = "%u"))))
 
@@ -169,11 +169,38 @@ em.last.2.weeks <- em.tidy.dtm.full %>%
       geom_label()
     top.10.words.trending.aa.p
   
-    # word cloud ^
+    # word cloud ^ ---- should make this for a month
     wordcloud.data <- top.10.words.trending.aa %>% 
       filter(Created_Week_Ending == max(top.10.words.trending.aa$Created_Week_Ending))
     wordcloud(wordcloud.data$term, wordcloud.data$word.week.total)
     wordcloud(top.10.words.trending.aa$term, top.10.words.trending.aa$word.week.total)  
+    
+    
+    
+    
+    
+## Aloha Analysis Dataset ##
+em.aloha.last.2.weeks <- em.tidy.words.all %>%
+  filter(Created_Date >= two.mondays.ago & Created_Date <= last.sunday) %>%
+  arrange(desc(word.trend)) %>%
+  mutate(Created_Week_Ending = Created_Date + ( 7 - as.integer(format(Created_Date, format = "%u"))))
+  
+  # analysis - top 10 words by count each week
+  top.10.words.weekly.count <- em.last.2.weeks %>%
+    group_by(Created_Week_Ending) %>%
+    count(term, sort = TRUE) %>%
+    top_n(10, wt = n) %>%
+    ungroup() %>%
+    mutate(wordorder = nrow(.):1) %>%
+    group_by(Created_Week_Ending, term) %>%  # begin ridiculous workaround for ordering words in facets correctly
+    arrange(desc(n)) %>%
+    ungroup() %>%
+    mutate(ord.term = paste(Created_Week_Ending,"__",term, sep = "")) %>%
+    group_by(term) %>%
+    mutate(word.frequency = n())   
+    
+    
+    
     
 # setwd("\\\\cewp1650\\Chris Jabr Reports\\Text Analysis")
 # write.csv(em.last.2.weeks, 

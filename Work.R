@@ -186,8 +186,25 @@ pp=plotly_build(p)
                   "transact", "transaction", "TRANSACTIONS", "issue", "ISsueS", "issued", "issuer",
                   "Lane", "lanes", "after two   lanes  and a lane  ")
   test.remove.words <- "lane"
-
-  stemDocument(test.words)
+  
+  library(hunspell)
+  stemDocument(test.words) %>% str()
+  
+  
+  test.hunspell.stem <- hunspell_stem(test.words)
+  test.hunspell.stem[[1]] %>% str()
+  test.hunspell.stem[1] %>% str()
+  
+  lapply(test.hunspell.stem, `[[`, 1)
+  sapply(test.words, toupper) %>% str()
+  lapply(test.words, toupper)
+  
+  # first element
+  map(test.hunspell.stem, 1)
+  # last element
+  test.hunspell.stem.stems <- sapply(test.hunspell.stem, tail, 1)
+  
+  ## hunspell stemmer is dropping some words - don't use ##
   
   freeze.synonyms <- list(
     list(word="(freeze issues)", syns=c("freez","froze","frozen"))
