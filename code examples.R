@@ -1,4 +1,26 @@
+#### 9/30/2017 - various text & inspection functions ####
 
+  # find tickets that have a bigram repeated in the title
+  test <- em.tidy.bigrams %>%
+    group_by(Id, bigram) %>%
+    mutate(id.bigram.total = n()) %>%
+    arrange(desc(id.bigram.total))
+  
+  test$Title
+
+  # find object size & format(print)
+  object.size(em.tidy.unigrams)
+  format(object.size(em.tidy.unigrams), units = "Mb")
+  format(object.size(em.tidy.bigrams), units = "Mb")
+  
+  # get all titles with the word "to" appearing twice
+  test <- em.tidy.text %>% filter(grepl(".* to .* to .*", em.tidy.text$Title))
+  
+  # search vector for regex char string
+  stop_words$word[grepl("new", stop_words$word)]
+  stop_words$word[grepl("^n", stop_words$word)]
+  names(em)[grep("(?i)create", names(em))]
+  test <- stop_words %>% filter(lexicon == "snowball", !word %in% c("down","above","below","again", "after"))
 
 
 #### Text mining in R ch1.4 - text mining jane austin ####
