@@ -177,7 +177,7 @@ pp=plotly_build(p)
 ### region not displaying correctly???? mytext??? ###
 
 
-#### 9/13/2017 - 9/20/2017 - word stemming 2.0 - consolidate worod stems w/ custom list ####
+#### 9/13/2017 - 9/20 - 9/30 word stemming 2.0 - consolidate worod stems w/ custom list ####
 
 
 
@@ -216,9 +216,16 @@ pp=plotly_build(p)
     }, syn, x)
   })
   
+  tidy.syns <- c("freez", "froze", "frozen")
+  ## tidy method of above
+  paste0("\\b(", paste(tidy.syns, collapse = "|"), ")\\b")
+  
   test.tm <- Corpus(VectorSource(test.words))
+  inspect(test.tm)
   test.tm <- tm_map(test.tm, tolower)
+  inspect(test.tm)
   test.tm <- tm_map(test.tm, stemDocument)
+  inspect(test.tm)
   test.tm <- tm_map(test.tm, replaceSynonymsFreeze, freeze.synonyms)
   inspect(test.tm)
   
@@ -237,13 +244,14 @@ pp=plotly_build(p)
   test$words <- removeWords(test$words, test.remove.words)
   test
   # remove words before unnesting tokens (but after lowercase etc) for better performance prob.
+  ## REMOVE WORDS AFTER STEMMING/LOWERCASE
   
-  # tokenize, tolower, stripwhitespace default, then manually stem / remove stopwords
+  # TIDY TEXT PROCESS - tokenize (& tolower & stripwhitespace), then stem, then remove stopwords
   test.tidy <- test %>%
     unnest_tokens(word, words, drop = F) %>%
     mutate(word = stemDocument(word)) %>%
-    mutate(word = removeWords(word, test.remove.words)) %>%
-    filter(!(word == ""))
+    mutate(word = removeWords(word, test.remove.words)) %>% ## will leave blanks
+    filter(!(word == "")) # needed after removing words ^; NEED TO USE CUSTOM STEMMER
   test.tidy
   
   

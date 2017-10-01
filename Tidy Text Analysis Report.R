@@ -29,6 +29,7 @@ startweek.2017 <- as.Date("2017-01-02")
 last.monday <- (Sys.Date() - 7) + ( 1 - as.integer(format(Sys.Date(), format = "%u")))
 last.sunday <- (Sys.Date() - 7) + ( 7 - as.integer(format(Sys.Date(), format = "%u")))
 this.monday <- Sys.Date() + (1 - as.integer(format(Sys.Date(), format = "%u")))
+num.weeks <- as.integer((this.monday - startweek.2017)/7)
 
 
 
@@ -45,45 +46,98 @@ em$Created_Week_Ending <- as.Date(em$Created_Week_Ending, "%m/%d/%Y")
 
 #### SUBSET - ALL 2017 - ONEPOS IRS ####
 
-num.weeks <- as.integer((this.monday - startweek.2017)/7)
-stopwords.169 <- stop_words %>% filter(lexicon == "snowball", !word %in% c("down","above","below","again", "after"))
-
 em.tidy <- em %>%
   filter(Created_Date >= startweek.2017 & Created_Date <= last.sunday & ONEPOS_LIST == 1) %>%
   select(Id, Created_Date, Created_Week, Created_Week_Ending, Smart_Region, Smart_Location, Title, LAST_SUPPORT_GROUP)
 
 
+# unigram stopwords
+word.blacklist <- data_frame(word = c("r10", "lane", "bus", "date", "ncr", "eod", "run", "lanes", "reg"))
+stopwords.unigram <- stop_words %>% filter(lexicon == "SMART") %>% select(word) %>% bind_rows(word.blacklist)
+
+# bigram stopwords - currently excluding some common terms ...
+word.blacklist.bigram <- data_frame(word = c("r10", "bus", "date"))
+stopwords.bigram <- stop_words %>% filter(lexicon == "snowball", !word %in% c("down","above","below","again", "after")) %>%
+  bind_rows(word.blacklist.bigram)
+
+
 # tidy text - distinct UNIGRAMS per IR w/ calcs, maybe stem/remove stopwords
 em.tidy.unigrams <- em.tidy %>%
   unnest_tokens(word, Title, drop = FALSE) %>%
-  filter(!word %in% stopwords.169$word)
+  filter(!word %in% stopwords.unigram$word) %>% ### ! stem here
   distinct() %>%
-  group_by(Created_Week_Ending, word.stem) %>%
+  group_by(Created_Week_Ending, word) %>%
     mutate(word.week.total = n()) %>%
-  group_by(word.stem) %>%
+  group_by(word) %>%
     mutate(word.population.total = n()) %>%
+    arrange(Created_Week_Ending) %>%
   ungroup() %>%
-    mutate(word.weekly.avg = word.week.total/num.weeks, 
-           word.weekly.trend = word.week.total / word.weekly.avg) %>%
-  ungroup()
+    mutate(word.week.avg = word.population.total/num.weeks, 
+           word.week.trend = word.week.total / word.week.avg)
+
+# unigram WoW calc - summary of term by week, lag; join back with week,word
+unigram.wow <- em.tidy.unigrams %>%
+  group_by(Created_Week_Ending) %>%
+  count(word) %>%
+  group_by(word) %>%
+  mutate(word.wow = (n - lag(n, order_by = Created_Week_Ending)) / lag(n, order_by = Created_Week_Ending)) 
+
+em.tidy.unigrams.w.wow <- em.tidy.unigrams %>%
+  inner_join(unigram.wow, by = c("Created_Week_Ending", "word")) %>% select(-n)
+
 
 # distinct BIGRAMS per IR w/ calcs - leaving in stopwords - stemming not working well
 em.tidy.bigrams <- em.tidy %>%
   unnest_tokens(bigram, Title, token = "ngrams", n = 2, drop = FALSE) %>%
-  distinct()
+  distinct() %>%
+  separate(bigram, c("word1", "word2"), sep = " ", remove = TRUE) %>% ### ! stem here
+  filter(!word1 %in% stopwords.bigram$word, !word2 %in% stopwords.bigram$word) %>% ### filter words
+  unite(bigram, c(word1, word2), sep = " ") %>%
+  group_by(Created_Week_Ending, bigram) %>%
+    mutate(bigram.week.total = n()) %>%
+  group_by(bigram) %>%
+    mutate(bigram.population.total = n()) %>%
+  ungroup() %>%
+    mutate(bigram.week.avg = bigram.population.total/num.weeks, 
+           bigram.week.trend = bigram.week.total / bigram.week.avg)
 
 
-## unigrams & bigrams for aloha ...???
+## unigrams & bigrams for aloha ...
 
 
 
-# scientific notation off
+#### ANALYSIS & VISUALIZATION ####
+
 options(scipen = 999)
+x <- 10 # words
+y <- 10 # weeks
+last.y.mondays <- (Sys.Date() - 7*y) + ( 1 - as.integer(format(Sys.Date(), format = "%u")))
 
 
-
-
-#### ANALYTICAL DATASETS FOR ANALYSIS & VISUALIZATION ####
+# Top X unigrams - last Y weeks
+top.x.unigrams <- em.tidy.unigrams %>%
+  group_by(Created_Week_Ending) %>%
+    count(word, sort = TRUE) %>%
+    top_n(20, wt = n) %>%
+  ungroup() %>%
+  mutate(wordorder = nrow(.):1) %>%
+  group_by(Created_Week_Ending, word) %>%
+    arrange(desc(n)) %>%
+  ungroup() %>%
+  mutate(facet.words = paste0(Created_Week_Ending, "__", word)) %>% #suffix word names for facet ordering
+  group_by(word) %>%
+    mutate(word.frequency = n())
+# Plot
+top.x.unigrams.plot <- top.x.unigrams %>%
+  ggplot(aes(reorder(facet.words, wordorder), n, fill = word, label = n)) +
+  geom_bar(stat = "identity", color = "black") +
+  facet_wrap(~Created_Week_Ending, scales = "free_y") +
+  labs(x = "Word", y = "Frequency", title = "Most Common Words - last X weeks") +
+  coord_flip() +
+  theme(legend.position = "none") +
+  scale_x_discrete(labels = function(x) gsub("^.+__", "", x)) +
+  geom_label()
+top.x.unigrams.plot
 
 ## dataset - summary view ##
 top.n.words.dataset <- em.tidy.words.all %>%

@@ -1,4 +1,21 @@
-#### 9/30/2017 - various text & inspection functions ####
+#### 9/30/2017 - custom 'get last x days|weeks' function
+last.x.timespan <- function(x, timespan = "weeks"){
+  if (timespan == "weeks") {
+    time.units <- 7
+  } else if (timespan == "days") {
+      time.units <- 0
+  }
+  last.x.date <- (Sys.Date() - x*time.units) + ( 1 - as.integer(format(Sys.Date(), format = "%u")))
+  return(last.x.date)
+}
+last.x.timespan(5,"weeks")
+last.x.timespan(3,"weeks")
+last.x.timespan(1,"weeks")
+last.x.timespan(0,"weeks")
+last.x.timespan(-1,"weeks")
+
+
+#### 9/29/2017 - various text & inspection functions ####
 
   # find tickets that have a bigram repeated in the title
   test <- em.tidy.bigrams %>%
