@@ -30,6 +30,7 @@ last.monday <- (Sys.Date() - 7) + ( 1 - as.integer(format(Sys.Date(), format = "
 last.sunday <- (Sys.Date() - 7) + ( 7 - as.integer(format(Sys.Date(), format = "%u")))
 this.monday <- Sys.Date() + (1 - as.integer(format(Sys.Date(), format = "%u")))
 num.weeks <- as.integer((this.monday - startweek.2017)/7)
+two.mondays.ago <- (Sys.Date() - 14) + ( 1 - as.integer(format(Sys.Date(), format = "%u")))
 
 
 
@@ -52,7 +53,7 @@ em.tidy <- em %>%
 
 
 # unigram stopwords
-word.blacklist <- data_frame(word = c("r10", "lane", "bus", "date", "ncr", "eod", "run", "lanes", "reg"))
+word.blacklist <- data_frame(word = c("r10", "lane", "bus", "date", "ncr", "eod", "run", "lanes", "reg","aloha"))
 stopwords.unigram <- stop_words %>% filter(lexicon == "SMART") %>% select(word) %>% bind_rows(word.blacklist)
 
 # bigram stopwords - currently excluding some common terms ...
@@ -102,7 +103,75 @@ em.tidy.bigrams <- em.tidy %>%
            bigram.week.trend = bigram.week.total / bigram.week.avg)
 
 
-## unigrams & bigrams for aloha ...
+
+#### SUBSET - ALL 2017 - ALOHA ####
+
+## top down keyword search & export
+aloha.issues <- c("kiosk", "terminal", "printer", "oops", "down", "network", "spool", "tax", "calculat",
+                  "sending|communicating", "menu")
+em.aloha <- em %>%
+  filter(Created_Date >= startweek.2017 & Created_Date <= last.sunday & ONEPOS_LIST == 1) %>%
+  filter(LAST_SUPPORT_GROUP %in% c("Aloha Data Configuration", "Aloha Support Team", "Aloha Hardware Support")) %>%
+  mutate(Aloha_Ticket_Type = toupper(str_extract(.$Title, paste0("(?i)(", aloha.issues, ")", collapse = "|")))) %>%
+  mutate(Aloha_Ticket_Type = ifelse(.$Aloha_Ticket_Type == "SENDING" | .$Aloha_Ticket_Type == "COMMUNICATING", 
+                                    "SENDING/COMMUNICATING", .$Aloha_Ticket_Type))
+                                       
+write.csv(em.aloha,
+          file = paste("Aloha issues 2017 - ", Sys.Date(), ".csv", sep = ""),
+          row.names = FALSE,
+          na = "")
+
+
+## aloha last 2 weeks word frequencies
+aloha.last.2.weeks <- em.aloha %>%
+  select(Id, Created_Date, Created_Week, Created_Week_Ending, LAST_SUPPORT_GROUP, Smart_Region, Smart_Location,
+         Title) %>%
+  filter(Created_Date >= two.mondays.ago & Created_Date <= last.sunday) %>%
+  unnest_tokens(word, Title, drop = FALSE) %>%
+  filter(!word %in% stopwords.unigram$word) %>% ### ! stem here
+  mutate(word = wordStem(word)) %>% #### !!!! stemming
+  distinct() %>%
+  group_by(Created_Week_Ending, word) %>%
+  mutate(word.week.total = n()) %>%
+  ungroup()
+
+write.csv(aloha.last.2.weeks,
+          file = paste("Aloha words L2W - ", Sys.Date(), ".csv", sep = ""),
+          row.names = FALSE,
+          na = "")
+
+# analysis - top 10 words by count each week
+aloha.top.10 <- aloha.last.2.weeks %>%
+  group_by(Created_Week_Ending) %>%
+  count(word, sort = TRUE) %>%
+  top_n(10, wt = n) %>%
+  ungroup() %>%
+  mutate(wordorder = nrow(.):1) %>%
+  group_by(Created_Week_Ending, word) %>%  # begin ridiculous workaround for ordering words in facets correctly
+  arrange(desc(n)) %>%
+  ungroup() %>%
+  mutate(ord.term = paste(Created_Week_Ending,"__",word, sep = "")) %>%
+  group_by(word) %>%
+  mutate(word.frequency = n()) ## for charting border thickness stuff ...
+
+# plot - top 10 words by count each week
+aloha.top.10.p <- aloha.top.10 %>%
+  ggplot(aes(reorder(ord.term, wordorder), n, fill = word, label = n)) +
+  geom_bar(stat = "identity", color = "black") +
+  facet_wrap(~Created_Week_Ending, scales = "free_y") + # scales arg necessary for diff words
+  labs(x = "Word", y = "Frequency", title = "Most Common Words by Week") +
+  coord_flip() +
+  theme(legend.position = "none") +
+  scale_x_discrete(labels = function(x) gsub("^.+__", "", x)) +
+  geom_label()
+aloha.top.10.p
+
+# save plot
+ggsave(paste0("Aloha Most Common Words L2W - ", Sys.Date(), ".png"), width = 13, height = 6, units = ("in"))
+
+
+
+
 
 
 
@@ -173,7 +242,7 @@ write.csv(em,
 
 
 ## subset dataset - last 2 weeks ##
-two.mondays.ago <- (Sys.Date() - 14) + ( 1 - as.integer(format(Sys.Date(), format = "%u")))
+
 em.last.2.weeks <- em.tidy.words.all %>%
   filter(Created_Date >= two.mondays.ago & Created_Date <= last.sunday) %>%
   # filter(word.week.total >= 5) %>%   ## filter out uncommon words?
