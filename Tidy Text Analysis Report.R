@@ -18,7 +18,7 @@ ipak <- function(pkg){
 
 # ipak("checkpoint")
 # checkpoint("2017-08-24")
-ipak(c("ggplot2", "tm", "sqldf", "scales","chron", "tidytext", "tidyr","dplyr","stringr", "plotly","tidyverse",
+ipak(c("tidyverse", "ggplot2", "tm", "sqldf", "scales","chron", "tidytext", "tidyr","dplyr","stringr", "plotly",
        "wordcloud", "SnowballC"))
 
 
@@ -124,8 +124,7 @@ write.csv(em.aloha,
 
 ## aloha last 2 weeks word frequencies
 aloha.last.2.weeks <- em.aloha %>%
-  select(Id, Created_Date, Created_Week, Created_Week_Ending, LAST_SUPPORT_GROUP, Smart_Region, Smart_Location,
-         Title) %>%
+  select(Id, Created_Date, Created_Week_Ending, LAST_SUPPORT_GROUP, Smart_Region, Smart_Location, Title) %>%
   filter(Created_Date >= two.mondays.ago & Created_Date <= last.sunday) %>%
   unnest_tokens(word, Title, drop = FALSE) %>%
   filter(!word %in% stopwords.unigram$word) %>% ### ! stem here
@@ -167,10 +166,26 @@ aloha.top.10.p <- aloha.top.10 %>%
 aloha.top.10.p
 
 # save plot
-ggsave(paste0("Aloha Most Common Words L2W - ", Sys.Date(), ".png"), width = 13, height = 6, units = ("in"))
+ggsave(paste0("Aloha Most Common Words L2W - ", Sys.Date(), ".png"), width = 13, height = 6, units = ("in"),
+       plot = aloha.top.10.p)
 
 
 
+
+test <- aloha.top.10 %>%
+  arrange(Created_Week_Ending, n)
+test
+# redo plot - col...
+aloha.top.10 %>%
+  ggplot(aes(reorder(ord.term, rev(wordorder)), n, fill = word, label = n)) +
+  geom_bar(stat = "identity", color = "black") +
+  facet_wrap(~Created_Week_Ending, scales = "free_x") + # scales arg necessary for diff words
+  labs(x = "Word", y = "Frequency", title = "Most Common Words by Week") +
+  # coord_flip() +
+  theme(legend.position = "none") +
+  scale_x_discrete(labels = function(x) gsub("^.+__", "", x)) +
+  geom_label()
+aloha.top.10.p
 
 
 
