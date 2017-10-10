@@ -1,3 +1,105 @@
+#### 10/10/2017 - remove non-printable characters, personal stemming lists ####
+
+a <- "Hey! \x8c\xe6 Maybe I can give some suggestions: \x8c\xe6"
+a
+gsub("[^[:print:]]","",a)
+
+texts <- c("i am member of the XYZ association",
+           "apply for our open associate position", 
+           "xyz memorial lecture takes place on wednesday", 
+           "vote for the most popular lecturer")
+
+wordStem(texts)
+
+test.synonyms <- list(word = c("freeze","freezes","freezing","freezed"))
+  
+  
+  list(
+  list(word="(freeze issues)", syns=c("freez","froze","frozen"))
+)
+
+
+#### 10/8/2017 - old code in tidy text analysis report ####
+
+function(old_code){
+  
+  
+  #### subset dataset - last 2 weeks ####
+  
+  em.last.2.weeks <- em.tidy.words.all %>%
+    filter(Created_Date >= two.mondays.ago & Created_Date <= last.sunday) %>%
+    # filter(word.week.total >= 5) %>%   ## filter out uncommon words?
+    arrange(desc(word.trend)) %>%
+    mutate(Created_Week_Ending = Created_Date + ( 7 - as.integer(format(Created_Date, format = "%u"))))
+  
+  # analysis - top 10 words by count each week
+  top.10.words.weekly.count <- em.last.2.weeks %>%
+    group_by(Created_Week_Ending) %>%
+    count(term, sort = TRUE) %>%
+    top_n(10, wt = n) %>%
+    ungroup() %>%
+    mutate(wordorder = nrow(.):1) %>%
+    group_by(Created_Week_Ending, term) %>%  # begin ridiculous workaround for ordering words in facets correctly
+    arrange(desc(n)) %>%
+    ungroup() %>%
+    mutate(ord.term = paste(Created_Week_Ending,"__",term, sep = "")) %>%
+    group_by(term) %>%
+    mutate(word.frequency = n())
+  
+  # plot - top 10 words by count each week
+  top.10.words.weekly.count.p <- top.10.words.weekly.count %>%
+    ggplot(aes(reorder(ord.term, wordorder), n, fill = term, label = n)) +
+    geom_bar(stat = "identity", color = "black") +
+    facet_wrap(~Created_Week_Ending, scales = "free_y") + # scales arg necessary for diff words
+    labs(x = "Word", y = "Frequency", title = "Most Common Words by Week") +
+    coord_flip() +
+    theme(legend.position = "none") +
+    scale_x_discrete(labels = function(x) gsub("^.+__", "", x)) +
+    geom_label()
+  
+  # save plot
+  top.10.words.weekly.count.p
+  ggsave(paste0("plot - Most Common Words - ", Sys.Date(), ".png"), width = 13, height = 6, units = ("in"))
+  
+  
+  ### need to define this w/ Melissa & others ###
+  # analysis - top 10 words by trending above average 
+  top.10.words.trending.aa <- em.last.2.weeks %>%
+    group_by(Created_Week_Ending, term) %>%
+    summarize(word.trend = mean(word.trend), word.weekly.avg = mean(word.weekly.avg),
+              word.week.total = mean(word.week.total), word.population.total = mean(word.population.total),
+              word.population.total = mean(word.population.total), num.weeks = mean(num.weeks)) %>%
+    arrange(desc(word.trend)) %>%
+    top_n(10, wt = word.trend) %>%
+    ungroup() %>%
+    mutate(wordorder = nrow(.):1) %>%
+    mutate(ord.term = paste(Created_Week_Ending,"__",term, sep = "")) %>%
+    group_by(term) %>%
+    mutate(word.frequency = n())
+  
+  # plot - top 10 words by trending above average
+  top.10.words.trending.aa.p <- top.10.words.trending.aa %>% 
+    ggplot(aes(reorder(ord.term, wordorder), word.trend, fill = term, label = round(word.trend,0)))+
+    geom_bar(stat = "identity", color = "black") +
+    facet_wrap(~Created_Week_Ending, scales = "free_y") + # scales arg necessary to hav diff words 
+    labs(x = "Word", y = "Spike in Frequency", title = "Words Spiking in Frequency") +
+    coord_flip() +
+    theme(legend.position = "none") +
+    scale_x_discrete(labels = function(x) gsub("^.+__", "", x)) +
+    geom_label()
+  top.10.words.trending.aa.p
+  
+  # word cloud ^ ---- should make this for a month
+  wordcloud.data <- top.10.words.trending.aa %>% 
+    filter(Created_Week_Ending == max(top.10.words.trending.aa$Created_Week_Ending))
+  wordcloud(wordcloud.data$term, wordcloud.data$word.week.total)
+  wordcloud(top.10.words.trending.aa$term, top.10.words.trending.aa$word.week.total)  
+  
+  
+  
+}
+
+
 #### 9/30/2017 - custom 'get last x days|weeks' function
 last.x.timespan <- function(x, timespan = "weeks"){
   if (timespan == "weeks") {

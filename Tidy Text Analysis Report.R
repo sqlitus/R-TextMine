@@ -19,7 +19,7 @@ ipak <- function(pkg){
 # ipak("checkpoint")
 # checkpoint("2017-08-24")
 ipak(c("tidyverse", "ggplot2", "tm", "sqldf", "scales","chron", "tidytext", "tidyr","dplyr","stringr", "plotly",
-       "wordcloud", "SnowballC"))
+       "wordcloud", "SnowballC", "RColorBrewer"))
 
 
 
@@ -36,36 +36,44 @@ two.mondays.ago <- (Sys.Date() - 14) + ( 1 - as.integer(format(Sys.Date(), forma
 
 #### IMPORT & CLEAN DATA ####
 
-em <- read.csv("\\\\cewp1650\\Chris Jabr Reports\\Extended Metrics 2017.csv")
+em <- read.csv("\\\\cewp1650\\Chris Jabr Reports\\Extended Metrics 2017.csv", encoding = "UTF-8")
 colnames(em)[1] <- "Id"
 em$Title <- as.character(em$Title)
 em$Smart_Region <- as.factor(em$Smart_Region)
 em$Created_Date <- as.Date(em$Created_Date, "%m/%d/%Y")
 em$Created_Week_Ending <- as.Date(em$Created_Week_Ending, "%m/%d/%Y")
 
+options(scipen = 999)
 
-
-#### PRE-PROCESSING: SUBSET 2017/ONEPOS, UNIGRAM/BIGRAM WEEKLY CALCS ####
+#### PRE-PROCESSING: SUBSET 2017/ONEPOS, STOPWORD LISTS, UNIGRAM/BIGRAM WEEKLY CALCS ####
 
 em.tidy <- em %>%
   filter(Created_Date >= startweek.2017 & Created_Date <= last.sunday & ONEPOS_LIST == 1) %>%
-  select(Id, Created_Date, Created_Week, Created_Week_Ending, Smart_Region, Smart_Location, Title, LAST_SUPPORT_GROUP)
+  select(Id, Created_Date, Created_Week, Created_Week_Ending, Smart_Region, Smart_Location, Title, LAST_SUPPORT_GROUP, Incident_Type)
 
+# General Stopwords
+general.stopwords <- data_frame(word = as.character(seq(0,10)))
+regions <- data_frame(word = tolower(c("CE","SP","NE","NC","FL","PN","NA","SW","TS","MA","SO","RM","MW","UK")))
 
 # unigram stopwords
 word.blacklist <- data_frame(word = c("r10", "lane", "bus", "date", "ncr", "eod", "run", "lanes", "reg","aloha"))
-stopwords.unigram <- stop_words %>% filter(lexicon == "SMART") %>% select(word) %>% bind_rows(word.blacklist)
+stopwords.unigram <- stop_words %>% filter(lexicon == "SMART") %>% select(word) %>% bind_rows(word.blacklist, general.stopwords, regions)
 
 # bigram stopwords - currently excluding some common terms ...
 word.blacklist.bigram <- data_frame(word = c("r10", "bus", "date"))
 stopwords.bigram <- stop_words %>% filter(lexicon == "snowball", !word %in% c("down","above","below","again", "after")) %>%
   bind_rows(word.blacklist.bigram)
 
+# Custom Stemming List
+synonyms.freeze <- c("freeze", "freezes", "freezing", "freezed", "froze", "frozen", "frozed")
+synonyms.kiosk <- c("kiosk", "kiosks")
 
 ### tidy text - distinct UNIGRAMS per IR w/ calcs, maybe stem/remove stopwords
   em.tidy.unigrams <- em.tidy %>%
     unnest_tokens(word, Title, drop = FALSE) %>%
-    filter(!word %in% stopwords.unigram$word) %>% ### ! stem here
+    filter(!word %in% stopwords.unigram$word) %>%
+    mutate(word = case_when(.$word %in% synonyms.freeze ~ "(FREEZE)", TRUE ~ .$word)) %>%
+    # mutate(word = wordStem(word)) %>%
     distinct() %>% ### distinct removes multiples of same word from the same IR
     group_by(Created_Week_Ending, word) %>%
       mutate(word.week.total = n()) %>%
@@ -107,7 +115,7 @@ em.tidy.bigrams <- em.tidy %>%
 
 
 
-#### ALOHA: KEYWORDS, ANALYSIS, VISUALIZATION ####
+#### ALOHA: TOP X TICKET TYPES/ISSUES - ANALYSIS & VISUALIZATION ####
 
 ### top down keyword search & export ###
 aloha.issues <- c("kiosk", "terminal", "printer", "oops", "down", "network", "spool", "tax", "calculat",
@@ -135,19 +143,21 @@ aloha.top.down <- em.aloha %>%
   group_by(Created_Week_Ending, Aloha_Ticket_Type) %>%  # ordering words in facets correctly
     arrange(desc(n)) %>%
   ungroup() %>%
-    mutate(ord.term = paste(Created_Week_Ending,"__",Aloha_Ticket_Type, sep = "")) %>%
-    mutate(Created_Week_Ending = as.factor(format(Created_Week_Ending, "%m-%d-%Y")))
+    mutate(ord.term = paste(Created_Week_Ending,"__",Aloha_Ticket_Type, sep = "")) 
       
 # plot
 aloha.top.down.p <- aloha.top.down %>%
   ggplot(aes(reorder(ord.term, rev(wordorder)), n, fill = Aloha_Ticket_Type, label = n)) +
   geom_bar(stat = "identity", color = "black") +
-  facet_wrap(~Created_Week_Ending, scales = "free_x") + # scales arg necessary for diff words
+  theme_bw() +
+  facet_wrap(~paste("Week Ending", format(Created_Week_Ending, "%m-%d-%Y")), scales = "free_x") + # scales arg necessary for diff words
   labs(x = "Aloha Issues", y = "Frequency", title = "Aloha Ticket Types by Created Week") +
   scale_x_discrete(labels = function(x) gsub("^.+__", "", x)) +
   geom_label() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "none")
+
 aloha.top.down.p
+ggsave(paste0("Aloha Ticket Types by Created Week L2W - ", Sys.Date(), ".png"), width = 9, height = 5, units = ("in"))
 
 
 # write.csv(em.aloha,
@@ -157,6 +167,7 @@ aloha.top.down.p
 
 
 
+#### ALOHA: TOP X UNIGRAMS - ANALYSIS & VISUALIZATION ####
 
 ### tidy text: aloha last 2 weeks - word frequencies ###
 aloha.unigrams.last.2.weeks <- em.aloha %>%
@@ -164,18 +175,13 @@ aloha.unigrams.last.2.weeks <- em.aloha %>%
   filter(Created_Date >= two.mondays.ago & Created_Date <= last.sunday) %>%
   unnest_tokens(word, Title, drop = FALSE) %>%
   filter(!word %in% stopwords.unigram$word) %>% ### stopwords
-  mutate(word = wordStem(word)) %>% 
+  mutate(word = case_when(.$word %in% synonyms.kiosk ~ "(KIOSK)", TRUE ~ .$word)) %>%
+  # mutate(word = wordStem(word)) %>% 
   distinct() %>%
   group_by(Created_Week_Ending, word) %>%
   mutate(word.week.total = n()) %>%
   ungroup() %>%
   mutate(word = toupper(word))
-
-# remove when get top 10 IRs list...
-write.csv(aloha.unigrams.last.2.weeks,
-          file = paste("Aloha words L2W - ", Sys.Date(), ".csv", sep = ""),
-          row.names = FALSE,
-          na = "")
 
 # calc
 aloha.top.10 <- aloha.unigrams.last.2.weeks %>%
@@ -190,23 +196,22 @@ aloha.top.10 <- aloha.unigrams.last.2.weeks %>%
     arrange(desc(n)) %>%
   ungroup() %>%
     mutate(ord.term = paste(Created_Week_Ending,"__",word, sep = "")) %>%
-    mutate(Created_Week_Ending = format(Created_Week_Ending, "%m-%d-%Y")) %>%
   group_by(word) %>%
     mutate(word.top10.freq = n()) ## for charting border thickness stuff ...
 
 # plot
 aloha.top.10.p <- aloha.top.10 %>%
   ggplot(aes(reorder(ord.term, rev(wordorder)), n, fill = word, label = n)) +
+  theme_bw() +
   geom_bar(stat = "identity", color = "black") +
-  facet_wrap(~Created_Week_Ending, scales = "free_x") + # scales arg necessary for diff words
+  facet_wrap(~paste("Week Ending", format(Created_Week_Ending, "%m-%d-%Y")), scales = "free_x") + # scales arg necessary for diff words
   labs(x = "Word", y = "Frequency", title = "Aloha - Most Common Words by Created Week") +
   scale_x_discrete(labels = function(x) gsub("^.+__", "", x)) +
   geom_label() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "none")
 
-# save
-ggsave(paste0("Aloha Most Common Words L2W - ", Sys.Date(), ".png"), width = 13, height = 6, units = ("in"),
-       plot = aloha.top.10.p)
+aloha.top.10.p
+ggsave(paste0("Aloha Most Common Words L2W - ", Sys.Date(), ".png"), width = 9, height = 5, units = ("in"))
 
 # IR list of the top terms...NOT PERFECT - PULLING ALL TICKETS WITH ANY MATCHING TOP 10 WORDS
 ir.list.aloha.top.10.words.l2w <- em.aloha %>%
@@ -216,9 +221,40 @@ ir.list.aloha.top.10.words.l2w <- em.aloha %>%
 
 
 
-#### ONEPOS: TOP X UNIGRAMS / TRENDING AA WORDS - ANALYSIS & VISUALIZATION ####
 
-options(scipen = 999)
+#### ONEPOS: TOP X TICKET TYPES/ISSUES - ANALYSIS & VISUALIZATION ####
+
+### Top X Incident_Types - L2W; filter out blanks
+top.x.ticket.types.l2w <- em.tidy %>%
+  filter(Created_Date >= two.mondays.ago & Created_Date <= last.sunday) %>%
+  group_by(Created_Week_Ending) %>%
+    count(Incident_Type, sort = TRUE) %>%
+    mutate(week.ir.total = sum(n)) %>%
+    filter(!(Incident_Type == "")) %>%
+    top_n(10, wt = n) %>%
+    mutate(week.top.10 = row_number()) %>%
+    filter(week.top.10 <= 10) %>%
+  ungroup() %>%
+    mutate(wordorder = nrow(.):1) %>%
+    mutate(facet.words = paste0(Created_Week_Ending, "__", Incident_Type)) #suffix word names for facet ordering
+
+# Plot
+top.x.ticket.types.l2w.plot <- top.x.ticket.types.l2w %>%
+  ggplot(aes(reorder(facet.words, rev(wordorder)), n, fill = Incident_Type, label = n)) +
+  theme_bw() + 
+  geom_bar(stat = "identity", color = "black") +
+  facet_wrap(~paste("Week Ending", format(Created_Week_Ending, "%m-%d-%Y")), scales = "free_x") +
+  labs(x = "Incident Type", y = "# of IRs", title = "Top 10 Incident Types - last 2 weeks") +
+  theme(legend.position = "none") +
+  scale_x_discrete(labels = function(x) gsub("^.+__", "", x)) +
+  geom_label() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "none")
+  
+top.x.ticket.types.l2w.plot
+ggsave(paste0("Top 10 Incident Types L2W - ", Sys.Date(), ".png"), width = 13, height = 6, units = ("in"))
+
+
+#### ONEPOS: TOP X UNIGRAMS - ANALYSIS & VISUALIZATION ####
 
 ### Top X unigrams - last Y weeks
 top.x.unigrams.l2w <- em.tidy.unigrams %>%
@@ -226,40 +262,33 @@ top.x.unigrams.l2w <- em.tidy.unigrams %>%
   group_by(Created_Week_Ending) %>%
   count(word, sort = TRUE) %>%
   top_n(10, wt = n) %>%
+  mutate(week.top.10 = row_number()) %>%
+  filter(week.top.10 <= 10) %>%
   ungroup() %>%
-  mutate(wordorder = nrow(.):1) %>%
-  group_by(Created_Week_Ending, word) %>%
-  arrange(desc(n)) %>%
-  ungroup() %>%
-  mutate(facet.words = paste0(Created_Week_Ending, "__", word)) %>% #suffix word names for facet ordering
+    mutate(wordorder = nrow(.):1) %>%
+    mutate(facet.words = paste0(Created_Week_Ending, "__", word)) %>% #suffix word names for facet ordering
   group_by(word) %>%
-  mutate(word.top10.freq = n())
+    mutate(word.top10.freq = n())
 
 # Plot
 top.x.unigrams.l2w.plot <- top.x.unigrams.l2w %>%
-  ggplot(aes(reorder(facet.words, wordorder), n, fill = word, label = n)) +
+  ggplot(aes(reorder(facet.words, rev(wordorder)), n, fill = word, label = n)) +
+  theme_bw() + 
   geom_bar(stat = "identity", color = "black") +
-  facet_wrap(~Created_Week_Ending, scales = "free_x") +
-  labs(x = "Word", y = "Frequency", title = "Most Common Words - last X weeks") +
+  facet_wrap(~paste("Week Ending", format(Created_Week_Ending, "%m-%d-%Y")), scales = "free_x") +
+  labs(x = "Word", y = "Frequency", title = "Most Common Words - last 2 weeks") +
   theme(legend.position = "none") +
   scale_x_discrete(labels = function(x) gsub("^.+__", "", x)) +
   geom_label() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "none")
+  theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "none") #+ labs(caption = "test text")
 
 top.x.unigrams.l2w.plot
-# '9' is showing up a lot - for September
-
-
-
-
-### top trending up words...
-
-
+ggsave(paste0("Most Common Words L2W - ", Sys.Date(), ".png"), width = 13, height = 6, units = ("in"))
 
 
 
 ### Top X unigrams - YESTERDAY/TODAY
-mydate <- Sys.Date()-2
+mydate <- Sys.Date()-1
 
 top.x.unigrams.today <- em %>%
   filter(Created_Date >= mydate & Created_Date <= Sys.Date() & ONEPOS_LIST == 1) %>%
@@ -270,147 +299,60 @@ top.x.unigrams.today <- em %>%
   count(word, sort = TRUE) %>%
   top_n(20, wt = n) %>%
   mutate(rank = row_number()) %>%
-  filter(rank <= 20)
+  filter(rank <= 10)
 
 # Plot
 top.x.unigrams.today.p <- top.x.unigrams.today %>%
-  ggplot(aes(reorder(word, rank), n, fill = word, label = n)) +
+  ggplot(aes(reorder(word, rev(rank)), n, fill = word, label = n)) +
   geom_bar(stat = "identity", color = "black") +
-  labs(x = "Word", y = "Frequency", title = paste0("Most Common Words - ", format(mydate, format = "%m/%d"))) +
+  labs(x = "Word", y = "Frequency", title = paste0("Most Common Words - ", format(mydate, format = "%m-%d"))) +
+  coord_flip() +
   theme(legend.position = "none") +
-  geom_label() +
+  scale_x_discrete(labels = function(x) gsub("^.+__", "", x)) +
+  geom_label()
+
+top.x.unigrams.today.p  ## weirdly concats MPOS to MPO, only here
+
+
+#### ONEPOS: TRENDING UP WORDS - ANALYSIS & VISUALIZATION ####
+
+### BUBBLING UP WORDS
+top.x.unigrams.bubbling.up.l2w <- em.tidy.unigrams %>%
+  filter(Created_Date >= two.mondays.ago & Created_Date <= last.sunday) %>%
+  group_by(Created_Week_Ending, word) %>%
+  summarize(word.week.trend = mean(word.week.trend), word.week.avg = mean(word.week.avg),
+            word.week.total = mean(word.week.total), word.population.total = mean(word.population.total), 
+            num.weeks = mean(num.weeks)) %>%
+  filter(word.population.total > 4) %>%
+  arrange(desc(word.week.trend)) %>%
+  top_n(10, wt = word.week.trend) %>%
+  ungroup() %>%
+  mutate(wordorder = nrow(.):1) %>%
+  mutate(ord.term = paste(Created_Week_Ending,"__", word, sep = ""))
+
+# Plot
+top.x.unigrams.bubbling.up.l2w.p <- top.x.unigrams.bubbling.up.l2w %>%
+  ggplot(aes(reorder(ord.term, wordorder), word.week.total, color = word, label = paste0(round(word.week.total,0),"x"))) +
+  theme_bw() +
+  geom_point(aes(alpha = word.week.trend, size = word.week.trend*4)) +
+  # geom_text(aes(label=paste0(round(word.week.trend, 0),"x")),color = "black", size = 3) +
+  facet_wrap(~Created_Week_Ending, scales = "free_x") +
+  labs(x = "Word", y = "Frequency", title = "Words Trending Up - last 2 weeks") +
+  theme(legend.position = "none") +
+  scale_x_discrete(labels = function(x) gsub("^.+__", "", x)) +
+  # geom_label() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "none")
 
-top.x.unigrams.today.p
+top.x.unigrams.bubbling.up.l2w.p
 
 
-
-
-
-
-#### old - delete after creating "today/yesterday" top 10 words plot... ####
-## dataset - summary view ##
-top.n.words.dataset <- em.tidy.words.all %>%
-  group_by(Created_Week_Ending) %>%
-  count(term, sort = TRUE) %>%
-  top_n(20, wt = n) %>%
-  ungroup() %>%
-  mutate(wordorder = nrow(.):1) %>%
-  group_by(Created_Week_Ending, term) %>%  # begin ridiculous workaround for ordering words in facets correctly
-  arrange(desc(n)) %>%
-  ungroup() %>%
-  mutate(ord.term = paste(Created_Week_Ending,"__",term, sep = "")) %>%
-  group_by(term) %>%
-  mutate(word.frequency = n())
-
-# plot - top 10 words summary view
-top.n.words.dataset.p <- top.n.words.dataset %>%
-  ggplot(aes(reorder(ord.term, wordorder), n, fill = term, label = n)) +
-  geom_bar(stat = "identity", color = "black") +
-  # facet_wrap(~Created_Week_Ending, scales = "free_y") + # scales arg necessary for diff words
-  labs(x = "Word", y = "Frequency", title = "Most Common Words - 9/27") +
-  coord_flip() +
-  theme(legend.position = "none") +
-  scale_x_discrete(labels = function(x) gsub("^.+__", "", x)) +
-  geom_label()
-
-# save plot
-top.n.words.dataset.p
-write.csv(em,
-          file = paste("IRs - 9-27", Sys.Date(), ".csv", sep = ""),
-          row.names = FALSE)
-
-
-
-#### subset dataset - last 2 weeks ####
-
-em.last.2.weeks <- em.tidy.words.all %>%
-  filter(Created_Date >= two.mondays.ago & Created_Date <= last.sunday) %>%
-  # filter(word.week.total >= 5) %>%   ## filter out uncommon words?
-  arrange(desc(word.trend)) %>%
-  mutate(Created_Week_Ending = Created_Date + ( 7 - as.integer(format(Created_Date, format = "%u"))))
-
-# analysis - top 10 words by count each week
-top.10.words.weekly.count <- em.last.2.weeks %>%
-  group_by(Created_Week_Ending) %>%
-  count(term, sort = TRUE) %>%
-  top_n(10, wt = n) %>%
-  ungroup() %>%
-  mutate(wordorder = nrow(.):1) %>%
-  group_by(Created_Week_Ending, term) %>%  # begin ridiculous workaround for ordering words in facets correctly
-  arrange(desc(n)) %>%
-  ungroup() %>%
-  mutate(ord.term = paste(Created_Week_Ending,"__",term, sep = "")) %>%
-  group_by(term) %>%
-  mutate(word.frequency = n())
-
-# plot - top 10 words by count each week
-top.10.words.weekly.count.p <- top.10.words.weekly.count %>%
-  ggplot(aes(reorder(ord.term, wordorder), n, fill = term, label = n)) +
-  geom_bar(stat = "identity", color = "black") +
-  facet_wrap(~Created_Week_Ending, scales = "free_y") + # scales arg necessary for diff words
-  labs(x = "Word", y = "Frequency", title = "Most Common Words by Week") +
-  coord_flip() +
-  theme(legend.position = "none") +
-  scale_x_discrete(labels = function(x) gsub("^.+__", "", x)) +
-  geom_label()
-
-# save plot
-top.10.words.weekly.count.p
-ggsave(paste0("plot - Most Common Words - ", Sys.Date(), ".png"), width = 13, height = 6, units = ("in"))
-
-
-### need to define this w/ Melissa & others ###
-# analysis - top 10 words by trending above average 
-top.10.words.trending.aa <- em.last.2.weeks %>%
-  group_by(Created_Week_Ending, term) %>%
-  summarize(word.trend = mean(word.trend), word.weekly.avg = mean(word.weekly.avg),
-            word.week.total = mean(word.week.total), word.population.total = mean(word.population.total),
-            word.population.total = mean(word.population.total), num.weeks = mean(num.weeks)) %>%
-  arrange(desc(word.trend)) %>%
-  top_n(10, wt = word.trend) %>%
-  ungroup() %>%
-  mutate(wordorder = nrow(.):1) %>%
-  mutate(ord.term = paste(Created_Week_Ending,"__",term, sep = "")) %>%
-  group_by(term) %>%
-  mutate(word.frequency = n())
-
-# plot - top 10 words by trending above average
-top.10.words.trending.aa.p <- top.10.words.trending.aa %>% 
-  ggplot(aes(reorder(ord.term, wordorder), word.trend, fill = term, label = round(word.trend,0)))+
-  geom_bar(stat = "identity", color = "black") +
-  facet_wrap(~Created_Week_Ending, scales = "free_y") + # scales arg necessary to hav diff words 
-  labs(x = "Word", y = "Spike in Frequency", title = "Words Spiking in Frequency") +
-  coord_flip() +
-  theme(legend.position = "none") +
-  scale_x_discrete(labels = function(x) gsub("^.+__", "", x)) +
-  geom_label()
-top.10.words.trending.aa.p
+## maybe a word cloud better for bubbling up words ....
 
 # word cloud ^ ---- should make this for a month
-wordcloud.data <- top.10.words.trending.aa %>% 
-  filter(Created_Week_Ending == max(top.10.words.trending.aa$Created_Week_Ending))
-wordcloud(wordcloud.data$term, wordcloud.data$word.week.total)
-wordcloud(top.10.words.trending.aa$term, top.10.words.trending.aa$word.week.total)  
+wordcloud(top.x.unigrams.bubbling.up.l2w$word, top.x.unigrams.bubbling.up.l2w$word.week.trend, c(3,.2),
+          random.order = FALSE)
+
+#### need to make color gradient
 
 
 
-
-
-
-
-# setwd("\\\\cewp1650\\Chris Jabr Reports\\Text Analysis")
-# write.csv(em.last.2.weeks, 
-#           file = paste("last 2 weeks - ", Sys.Date(), ".csv", sep = ""), 
-#           row.names = FALSE)
-
-
-
-#tidytext equivalent...
-# consolidate stems
-# mutate(word = if_else(word %in% c("emailing", "emails"), "email", word))
-# test str replace ..
-# handle *MSR from MSR ... ... regex gsub keeping certain punct.....
-
-# plot - case when word is repeated, BOLD or something.
-# outline color thicker based on freq of word...size, scale didn't work, ggplot aes vs geom aes...
