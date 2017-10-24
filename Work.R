@@ -65,6 +65,45 @@ ipak <- function(pkg){
 ipak(c("ggplot2", "tm", "sqldf", "scales","chron", "tidytext", "tidyr","dplyr","plotly","tidyverse"))
 
 
+
+
+#### 10/24/2017 - automate power point creation ####
+
+install.packages("officer")
+library(officer)
+library(tidyverse)
+library(stringr)
+
+orig_pres <- read_pptx("C:\\Work\\Analysis\\OnePOS\\New Weekly Support Deck - 2017\\10_25_2017 chris refresh.pptx")
+
+layout_summary(orig_pres) 
+
+pp.theme <- layout_summary(orig_pres)$master %>% max()
+
+my_pres <- orig_pres %>%
+  add_slide(layout = "Title and Content", master = pp.theme)
+
+my_pres <- my_pres %>% 
+  ph_with_text(type = "title", str = "A title") %>%
+  ph_with_text(type = "sldNum", str = "slide 1") %>%
+  ph_with_text(str = "Hello world", type = "body")
+
+
+my_pres <- my_pres %>% on_slide(3) %>% ph_with_text(type = "title", str = "redone title")
+
+my_pres <- my_pres %>% add_slide(layout = "Title and Content", master = pp.theme)
+
+# my_pres <- my_pres %>% 
+#   ph_add_text(str = "A small red text!", style = text_prop ) # %>% 
+#   ph_add_text(str = "Blue text first... ", pos = "before", style = text_blue_prop ) %>% 
+#   ph_add_par(level = 2) %>%
+#   ph_add_text(str = "additionnal paragraph")
+
+
+print(my_pres, target = "C:\\Work\\Analysis\\OnePOS\\New Weekly Support Deck - 2017\\automate_test.pptx")
+
+
+
 #### 9/20/2017 - date arithmatic - week ending; SQL LIKE equivalent (which) ####
 
 library(lubridate)
