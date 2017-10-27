@@ -66,6 +66,29 @@ ipak(c("ggplot2", "tm", "sqldf", "scales","chron", "tidytext", "tidyr","dplyr","
 
 
 
+#### 10/25/2017 - example ir type window function aggregates - for annotations ####
+
+
+  # ir type - window function aggregates
+test <- em.tidy %>%
+  filter(Created_Date >= two.mondays.ago & Created_Date <= last.sunday) %>%
+  group_by(Created_Week_Ending) %>%
+  count(Incident_Type, sort = TRUE) %>% 
+  mutate(week.ir.total = sum(n)) %>%  ## week total
+  filter(!(Incident_Type == "")) %>%
+  mutate(week.total.identified.1 = sum(n)) %>%  ## week total identified
+  top_n(10, wt = n) %>%
+  mutate(week.top10total.withties = sum(n)) %>% 
+  mutate(week.top.10 = row_number()) %>% 
+  filter(week.top.10 <= 10) %>%
+  mutate(week.top.n.total = sum(n)) %>% # true top 10 count - after filtering to top 10 rows for week
+  ungroup() %>%
+  mutate(wordorder = nrow(.):1) %>%
+  mutate(facet.words = paste0(Created_Week_Ending, "__", Incident_Type)) #suffix word names for facet ordering
+
+  for (i in 1:5){
+    print("test")
+  }
 
 #### 10/24/2017 - automate power point creation ####
 

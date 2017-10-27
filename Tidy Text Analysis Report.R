@@ -5,8 +5,8 @@
 # (REFACTORING EM TM - TRENDING ABOVE AVERAGE)
 ################################################
 
-setwd("C:\\Work\\Git\\Repos\\R-TextMine")
-subdir <- paste0("Text Analysis - ", Sys.Date())
+setwd("C:\\Work\\Git\\Repos\\R-TextMine\\weekly")
+subdir <- paste0("Weekly Text Analysis - ", Sys.Date())
 dir.create(subdir)
 setwd(file.path(getwd(), subdir))
 
@@ -35,6 +35,8 @@ this.monday <- Sys.Date() + (1 - as.integer(format(Sys.Date(), format = "%u")))
 num.weeks <- as.integer((this.monday - startweek.2017)/7)
 two.mondays.ago <- (Sys.Date() - 14) + ( 1 - as.integer(format(Sys.Date(), format = "%u")))
 four.mondays.ago <- (Sys.Date() - (7*4)) + ( 1 - as.integer(format(Sys.Date(), format = "%u")))
+my.w <- 13  # width/height for output plots
+my.h <- 6
 
 
 
@@ -162,7 +164,7 @@ aloha.top.down.p <- aloha.top.down %>%
   theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "none")
 
 aloha.top.down.p
-ggsave(paste0("Aloha Ticket Types by Created Week L2W - ", Sys.Date(), ".png"), width = 9, height = 5, units = ("in"))
+ggsave(paste0("Aloha Ticket Types by Created Week L2W - ", Sys.Date(), ".bmp"), width = my.w, height = my.h, units = ("in"))
 
 
 # write.csv(em.aloha,
@@ -216,7 +218,7 @@ aloha.top.10.p <- aloha.top.10 %>%
   theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "none")
 
 aloha.top.10.p
-ggsave(paste0("Aloha Most Common Words L2W - ", Sys.Date(), ".png"), width = 9, height = 5, units = ("in"))
+ggsave(paste0("Aloha Most Common Words L2W - ", Sys.Date(), ".bmp"), width = my.w, height = my.h, units = ("in"))
 
 # IR list of the top terms...NOT PERFECT - PULLING ALL TICKETS WITH ANY MATCHING TOP 10 WORDS
 ir.list.aloha.top.10.words.l2w <- em.aloha %>%
@@ -236,9 +238,11 @@ top.x.ticket.types.l2w <- em.tidy %>%
     count(Incident_Type, sort = TRUE) %>%
     mutate(week.ir.total = sum(n)) %>%
     filter(!(Incident_Type == "")) %>%
+    mutate(week.total.identified = sum(n)) %>%
     top_n(10, wt = n) %>%
     mutate(week.top.10 = row_number()) %>%
     filter(week.top.10 <= 10) %>%
+    mutate(week.total.in.top.10 = sum(n)) %>%
   ungroup() %>%
     mutate(wordorder = nrow(.):1) %>%
     mutate(facet.words = paste0(Created_Week_Ending, "__", Incident_Type)) #suffix word names for facet ordering
@@ -256,8 +260,30 @@ top.x.ticket.types.l2w.plot <- top.x.ticket.types.l2w %>%
   theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "none")
   
 top.x.ticket.types.l2w.plot
-ggsave(paste0("Top 10 Incident Types L2W - ", Sys.Date(), ".png"), width = 13, height = 6, units = ("in"))
+ggsave(paste0("Top 10 Incident Types L2W - ", Sys.Date(), ".png"), width = my.w, height = my.h, units = ("in"))
 
+
+
+Annotations.OnePOS <- function(df){
+  # get distinct weeks & totals
+  x <- df %>% group_by(Created_Week_Ending) %>% distinct(week.ir.total, .keep_all = TRUE)
+  
+  # produce annotations for each week
+  for (i in 1:length(x$Created_Week_Ending)){
+    paste(x$Created_Week_Ending[i], "week ir total:", x$week.ir.total[i]) %>% print()
+    paste(x$Created_Week_Ending[i], "week total identified:", x$week.total.identified[i]) %>% print()
+    cat("\n")
+    
+    # loop through each column for a summary
+    for (j in 1:length(names(x))){
+      paste(names(x)[j], x[[i,j]]) %>% print()
+    }
+    cat("\n")
+  }
+  
+
+}
+Annotations.OnePOS(top.x.ticket.types.l2w)
 
 #### ONEPOS: TOP X UNIGRAMS - ANALYSIS & VISUALIZATION ####
 
@@ -288,7 +314,7 @@ top.x.unigrams.l2w.plot <- top.x.unigrams.l2w %>%
   theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "none") #+ labs(caption = "test text")
 
 top.x.unigrams.l2w.plot
-ggsave(paste0("Most Common Words L2W - ", Sys.Date(), ".png"), width = 13, height = 6, units = ("in"))
+ggsave(paste0("Most Common Words L2W - ", Sys.Date(), ".png"), width = my.w, height = my.h, units = ("in"))
 
 
 

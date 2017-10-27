@@ -36,8 +36,8 @@ num.weeks <- as.integer((this.monday - startweek.2017)/7)
 two.mondays.ago <- (Sys.Date() - 14) + ( 1 - as.integer(format(Sys.Date(), format = "%u")))
 four.mondays.ago <- (Sys.Date() - (7*4)) + ( 1 - as.integer(format(Sys.Date(), format = "%u")))
 
-plot.output.width <- 13
-plot.output.height <- 6
+my.w <- 13
+my.h <- 6
 
 #### IMPORT & CLEAN DATA ####
 
@@ -154,7 +154,7 @@ aloha.top.down.p <- aloha.top.down %>%
   theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "none")
 
 aloha.top.down.p
-ggsave(paste0("Aloha Ticket Types by Last 4 Weeks - ", Sys.Date(), ".png"), width = plot.output.width, height = plot.output.height, units = ("in"))
+ggsave(paste0("Aloha Ticket Types by Last 4 Weeks - ", Sys.Date(), ".png"), width = my.w, height = my.h, units = ("in"))
 
 # count how many incidents this captured...
 test <- em.aloha %>% filter(Created_Date >= four.mondays.ago & Created_Date <= last.sunday)
@@ -200,7 +200,7 @@ aloha.top.10.p <- aloha.top.10 %>%
   theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "none")
 
 aloha.top.10.p
-ggsave(paste0("Aloha Most Common Words by Last 4 Weeks ", Sys.Date(), ".png"), width = plot.output.width, height = plot.output.height, units = ("in"))
+ggsave(paste0("Aloha Most Common Words by Last 4 Weeks ", Sys.Date(), ".png"), width = my.w, height = my.h, units = ("in"))
 
 # IR list of the top terms...NOT PERFECT - PULLING ALL TICKETS WITH ANY MATCHING TOP 10 WORDS
 ir.list.aloha.top.10.words.l2w <- em.aloha %>%
@@ -235,7 +235,7 @@ top.x.ticket.types.l2w.plot <- top.x.ticket.types.l2w %>%
   theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "none")
 
 top.x.ticket.types.l2w.plot
-ggsave(paste0("Top 10 Incident Types Last 4 Weeks ", Sys.Date(), ".png"), width = plot.output.width, height = plot.output.height, units = ("in"))
+ggsave(paste0("Top 10 Incident Types Last 4 Weeks ", Sys.Date(), ".png"), width = my.w, height = my.h, units = ("in"))
 
 
 #### ONEPOS: TOP X UNIGRAMS - ANALYSIS & VISUALIZATION ####
@@ -268,7 +268,7 @@ top.x.unigrams.l2w.plot <- top.x.unigrams.l2w %>%
   theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "none") #+ labs(caption = "test text")
 
 top.x.unigrams.l2w.plot
-ggsave(paste0("Most Common Words Last 4 Weeks ", Sys.Date(), ".png"), width = plot.output.width, height = plot.output.height, units = ("in"))
+ggsave(paste0("Most Common Words Last 4 Weeks ", Sys.Date(), ".png"), width = my.w, height = my.h, units = ("in"))
 
 
 
