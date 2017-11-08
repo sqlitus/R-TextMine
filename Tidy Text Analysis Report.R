@@ -271,17 +271,7 @@ Annotations.OnePOS <- function(df){
   # produce annotations for each week
   for (i in 1:length(x$Created_Week_Ending)){
     paste(x$Created_Week_Ending[i], "week ir total:", x$week.ir.total[i]) %>% print()
-    paste(x$Created_Week_Ending[i], "week total identified:", x$week.total.identified[i]) %>% print()
-    cat("\n")
-    
-    # loop through each column for a summary
-    for (j in 1:length(names(x))){
-      paste(names(x)[j], x[[i,j]]) %>% print()
-    }
-    cat("\n")
   }
-  
-
 }
 Annotations.OnePOS(top.x.ticket.types.l2w)
 

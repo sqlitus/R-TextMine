@@ -66,6 +66,37 @@ ipak(c("ggplot2", "tm", "sqldf", "scales","chron", "tidytext", "tidyr","dplyr","
 
 
 
+
+#### 11/8/2017 - Selenium first look ####
+install.packages("RSelenium") 
+library(tidyverse); library(RSelenium)
+rsDriver()
+mybrowser <- remoteDriver()
+
+mybrowser$open()
+mybrowser$navigate("http://www.weather.gov")
+
+
+
+#### 11/8/2017 - importing excel/sheets by file search ####
+
+library(readxl); library(tidyverse)
+
+# searches for "overall master .* deployment" sheet in path, and reads master schedule sheet 
+deployment.table <- read_excel(path = paste0("C:\\Work\\Resources\\", list.files("C:\\Work\\Resources", pattern = "overall master.*deployment", ignore.case = TRUE) %>% max()),
+                               sheet = "Master Schedule", 
+                               skip = 1)
+
+# read EM
+# filter full weeks
+# count num weeks
+
+
+#### 11/4/2017 - factors ####
+
+test <- factor(c("first","second","third"), levels = c("first","second","third"))
+
+
 #### 10/25/2017 - example ir type window function aggregates - for annotations ####
 
 
