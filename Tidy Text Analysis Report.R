@@ -337,36 +337,57 @@ top.x.unigrams.day.p  ## weirdly concats MPOS to MPO, only here
 
 #### ONEPOS: TRENDING UP WORDS - ANALYSIS & VISUALIZATION ####
 
-### BUBBLING UP WORDS - by week total vs week avg of entire dataset (& reconsolidate aggregates for plotting)
-top.x.unigrams.bubbling.up.l2w <- em.tidy.unigrams %>%
-  filter(Created_Date >= two.mondays.ago & Created_Date <= last.sunday) %>%
-  group_by(Created_Week_Ending, word) %>%
+#### BUBBLING UP WORDS - by week total vs week avg of entire dataset ####
+
+# word week trend: 1 = 100% of normal rate, 2 = 2x or 200% of normal rate, 20 = 2000% of normal rate (20 times more than norm)
+WordTrendRate <- function(df, START_DATE, END_DATE, min_freq, top_x){
+  
+  # should be week start (Monday) and end (Sunday) for weekly analysis
+  START_DATE <- as.Date(START_DATE)
+  END_DATE <- as.Date(END_DATE)
+  
+  # Calcs
+  df <- df %>%
+    filter(Created_Date >= START_DATE & Created_Date <= END_DATE) %>%
+    group_by(Created_Week_Ending, word) %>%
     summarize(word.week.trend = mean(word.week.trend), word.week.avg = mean(word.week.avg),
               word.week.total = mean(word.week.total), word.population.total = mean(word.population.total), 
               num.weeks = mean(num.weeks)) %>%
-    filter(word.week.total > 4) %>%
-    arrange(Created_Week_Ending, desc(word.week.trend), desc(word.week.total)) %>%
-      top_n(10, wt = word.week.trend) %>%
-      mutate(week.top.10 = row_number()) %>%
-      filter(week.top.10 <= 10) %>%
-  ungroup() %>%
+    filter(word.week.total >= min_freq) %>%
+    arrange(Created_Week_Ending, desc(word.week.trend, desc(word.week.total))) %>%
+    top_n(top_x, wt = word.week.trend) %>%
+    mutate(week.top.10 = row_number()) %>%
+    filter(week.top.10 <= top_x) %>%
+    arrange(Created_Week_Ending, desc(word.week.total), desc(word.week.trend)) %>% # reorder by freq. for plot
+    ungroup() %>%
     mutate(wordorder = 1:nrow(.)) %>%
     mutate(ord.term = paste(Created_Week_Ending,"__", word, sep = ""))
+  
+  # Plot
+  df.p <- df %>%
+    ggplot(aes(x = reorder(ord.term, wordorder), y = word.week.total, color = word)) + # label = paste0(round(word.week.total,0),"x")
+    theme_bw() +
+    geom_point(aes(size = word.week.trend, color = word), alpha = .5) +
+    # geom_text(aes(label=paste0(round(word.week.trend, 0),"x")),color = "black", size = 3) +
+    facet_wrap(~Created_Week_Ending, scales = "free_x") +
+    labs(x = "Word", y = "Frequency", title = paste0("Words Trending Up")) +
+    # theme(legend.position = "none") +
+    scale_x_discrete(labels = function(x) gsub("^.+__", "", x)) +
+    # geom_label() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    guides(color = FALSE, size = guide_legend(title = "Trend Rate")) +
+    scale_size_continuous(range = c(5, 20)) +
+    # scale_size_area(breaks = pretty(df$word.week.trend, n = 5)) +
+    scale_y_continuous(breaks = pretty(df$word.week.total, n = 6))
+  
+  return(df.p)
+}
+WordTrendRate(em.tidy.unigrams, two.mondays.ago, last.sunday, min_freq = 5, top_x = 10)
+WordTrendRate(em.tidy.unigrams, "2017-10-02", last.sunday, min_freq = 5, top_x = 5)
+WordTrendRate(em.tidy.unigrams, "2017-10-16", last.sunday, min_freq = 2, top_x = 5)
 
-# Plot
-top.x.unigrams.bubbling.up.l2w.p <- top.x.unigrams.bubbling.up.l2w %>%
-  ggplot(aes(x = reorder(ord.term, wordorder), y = word.week.total, color = word, label = paste0(round(word.week.total,0),"x"))) +
-  geom_point(aes(alpha = word.week.trend, color = word), size = 11) +
-  # geom_text(aes(label=paste0(round(word.week.trend, 0),"x")),color = "black", size = 3) +
-  facet_wrap(~Created_Week_Ending, scales = "free_x") +
-  labs(x = "Word", y = "Frequency", title = "Words Trending Up - last 2 weeks") +
-  # theme(legend.position = "none") +
-  scale_x_discrete(labels = function(x) gsub("^.+__", "", x)) +
-  geom_label() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  scale_size(guide = "none")
-top.x.unigrams.bubbling.up.l2w.p
 
+#### Word Cloud - full time period ####
 
 ## maybe a word cloud better for bubbling up words ....
 
