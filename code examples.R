@@ -1,3 +1,71 @@
+#### char math: time to response ####
+
+char.ttr <- read.delim("clipboard")
+
+ggplot(char.ttr, aes(Time_to_Response__M_)) + geom_histogram(bins = 30) +
+  geom_vline(xintercept = median(char.ttr$Time_to_Response__M_), color = "steelblue", size = 1) +
+  geom_vline(xintercept = mean(char.ttr$Time_to_Response__M_), color = "firebrick", size = 1) +
+  scale_x_continuous(breaks = pretty(char.ttr$Time_to_Response__M_, 12)) +
+  ggplot2::annotate("text", x = mean(char.ttr$Time_to_Response__M_), y = 40, 
+                    label = round(mean(char.ttr$Time_to_Response__M_)),
+                    angle = 90,
+                    vjust = 1,
+                    size = 9)
+
+
+ggplot(char.ttr, aes(Time_to_Response__M_)) + geom_boxplot()
+
+# proportion histogram: showing percent of values at intervals...
+ggplot(char.ttr, aes(Time_to_Response__M_)) + geom_histogram(aes(y = ..count../sum(..count..)))
+
+
+#### annotation function test ####
+
+# OnePOS ticket types
+annotation.df.test <- top.x.ticket.types.l2w %>%
+  select(Created_Week_Ending, week.ir.total, week.total.identified, week.total.in.top.10) %>% distinct() %>%
+  mutate(identified.percent = week.total.identified / week.ir.total) %>%
+  mutate(top.10.percent = week.total.in.top.10 / week.ir.total)
+
+# onepos unigrams
+a.uni <- em.tidy.unigrams %>%
+  filter(Created_Date >= two.mondays.ago & Created_Date <= last.sunday) %>%
+  group_by(Created_Week_Ending) %>%
+  mutate(week.ir.total = n_distinct(Id))
+
+  # mutate(week.ir.total = count(Id)) ### here ###
+  count(word, sort = TRUE) %>%
+  top_n(10, wt = n) %>%
+  mutate(week.top.10 = row_number()) %>%
+  filter(week.top.10 <= 10) %>%
+  ungroup() %>%
+  mutate(wordorder = nrow(.):1) %>%
+  mutate(facet.words = paste0(Created_Week_Ending, "__", word)) %>% #suffix word names for facet ordering
+  group_by(word) %>%
+  mutate(word.top10.freq = n())
+
+
+TestAnnotationsFunction <- function(df){
+  x = as.list()
+  for (i in 1:nrow(df)){
+    x[i] = df
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 #### function local/global variable test ####
 testFunction <- function(x){
   x = x + 1

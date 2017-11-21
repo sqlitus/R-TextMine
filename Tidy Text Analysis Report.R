@@ -281,6 +281,7 @@ Annotations.OnePOS(top.x.ticket.types.l2w)
 top.x.unigrams.l2w <- em.tidy.unigrams %>%
   filter(Created_Date >= two.mondays.ago & Created_Date <= last.sunday) %>%
   group_by(Created_Week_Ending) %>%
+  # mutate(week.ir.total = count(Id)) ### here ###
   count(word, sort = TRUE) %>%
   top_n(10, wt = n) %>%
   mutate(week.top.10 = row_number()) %>%

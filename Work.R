@@ -67,6 +67,18 @@ ipak(c("ggplot2", "tm", "sqldf", "scales","chron", "tidytext", "tidyr","dplyr","
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 #### 11/8/2017 - Selenium first look ####
 install.packages("RSelenium") 
 library(tidyverse); library(RSelenium)
