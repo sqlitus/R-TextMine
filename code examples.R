@@ -21,19 +21,20 @@ ggplot(char.ttr, aes(Time_to_Response__M_)) + geom_histogram(aes(y = ..count../s
 
 #### annotation function test ####
 
-# OnePOS ticket types
+# OnePOS ticket types - get weekly calcs
 annotation.df.test <- top.x.ticket.types.l2w %>%
-  select(Created_Week_Ending, week.ir.total, week.total.identified, week.total.in.top.10) %>% distinct() %>%
+  select(Created_Week_Ending, week.ir.total, week.total.identified, week.total.in.top.10) %>% 
+  distinct() %>%
   mutate(identified.percent = week.total.identified / week.ir.total) %>%
   mutate(top.10.percent = week.total.in.top.10 / week.ir.total)
 
-# onepos unigrams
-a.uni <- em.tidy.unigrams %>%
+# onepos unigrams - summary, annotation calcs, plot
+a.uni.weektot <- em.tidy.unigrams %>% filter(Created_Date >= two.mondays.ago & Created_Date <= last.sunday) %>%
+  group_by(Created_Week_Ending) %>% summarise(week.ir.total = n_distinct(Id))
+
+a.uni.1 <- em.tidy.unigrams %>%
   filter(Created_Date >= two.mondays.ago & Created_Date <= last.sunday) %>%
   group_by(Created_Week_Ending) %>%
-  mutate(week.ir.total = n_distinct(Id))
-
-  # mutate(week.ir.total = count(Id)) ### here ###
   count(word, sort = TRUE) %>%
   top_n(10, wt = n) %>%
   mutate(week.top.10 = row_number()) %>%
@@ -44,26 +45,51 @@ a.uni <- em.tidy.unigrams %>%
   group_by(word) %>%
   mutate(word.top10.freq = n())
 
+# replicate w/ window funcs; get all calcs in 1 dataframe
+a.uni <- em.tidy.unigrams %>%
+  filter(Created_Date >= two.mondays.ago & Created_Date <= last.sunday) %>%
+  group_by(Created_Week_Ending) %>%
+  mutate(week.ir.total = n_distinct(Id)) %>%
+  group_by(Created_Week_Ending, word) %>%
+  mutate(n = n()) %>%
+  summarise(n = mean(n), week.ir.total = mean(week.ir.total)) %>% 
+  arrange(Created_Week_Ending, desc(n)) %>%
+  top_n(10, wt = n) %>%
+  mutate(week.top.10 = row_number()) %>%
+  filter(week.top.10 <= 10) %>%
+  ungroup() %>%
+  mutate(wordorder = nrow(.):1) %>%
+  mutate(facet.words = paste0(Created_Week_Ending, "__", word)) %>% #suffix word names for facet ordering
+  group_by(word) %>%
+  mutate(word.top10.freq = n()) 
 
-TestAnnotationsFunction <- function(df){
-  x = as.list()
-  for (i in 1:nrow(df)){
-    x[i] = df
-  }
-}
+# plot is fine
+  a.uni %>%
+  ggplot(aes(reorder(facet.words, rev(wordorder)), n, fill = word, label = n)) +
+  theme_bw() + 
+  geom_bar(stat = "identity", color = "black") +
+  facet_wrap(~paste("Week Ending", format(Created_Week_Ending, "%m-%d-%Y")), scales = "free_x") +
+  labs(x = "Word", y = "Frequency", title = "Most Common Words - last 2 weeks") +
+  theme(legend.position = "none") +
+  scale_x_discrete(labels = function(x) gsub("^.+__", "", x)) +
+  geom_label() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "none") #+ labs(caption = "test text")
+
+
+annotation.df.test$Created_Week_Ending[1]
+annotation.df.test$week.ir.total[1]
 
 
 
 
+#### comparing dplyr summarise & count/tally####
+# identical
+mtcars %>% tally()
+mtcars %>% summarise(n = n())
 
-
-
-
-
-
-
-
-
+# identical grouped counts
+mtcars %>% count(cyl)
+mtcars %>% group_by(cyl) %>% summarise(n = n())
 
 
 #### function local/global variable test ####
