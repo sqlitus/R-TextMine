@@ -19,65 +19,105 @@ ggplot(char.ttr, aes(Time_to_Response__M_)) + geom_boxplot()
 ggplot(char.ttr, aes(Time_to_Response__M_)) + geom_histogram(aes(y = ..count../sum(..count..)))
 
 
-#### annotation function test ####
 
-# OnePOS ticket types - get weekly calcs
-annotation.df.test <- top.x.ticket.types.l2w %>%
-  select(Created_Week_Ending, week.ir.total, week.total.identified, week.total.in.top.10) %>% 
-  distinct() %>%
-  mutate(identified.percent = week.total.identified / week.ir.total) %>%
-  mutate(top.10.percent = week.total.in.top.10 / week.ir.total)
+#### text function words: clean, summarize, plot, annotate ####
 
-# onepos unigrams - summary, annotation calcs, plot
-a.uni.weektot <- em.tidy.unigrams %>% filter(Created_Date >= two.mondays.ago & Created_Date <= last.sunday) %>%
-  group_by(Created_Week_Ending) %>% summarise(week.ir.total = n_distinct(Id))
+# top x unigrams 
+test.function.words <- function(df, start.date, end.date, top.x.words){
 
-a.uni.1 <- em.tidy.unigrams %>%
-  filter(Created_Date >= two.mondays.ago & Created_Date <= last.sunday) %>%
-  group_by(Created_Week_Ending) %>%
-  count(word, sort = TRUE) %>%
-  top_n(10, wt = n) %>%
-  mutate(week.top.10 = row_number()) %>%
-  filter(week.top.10 <= 10) %>%
-  ungroup() %>%
-  mutate(wordorder = nrow(.):1) %>%
-  mutate(facet.words = paste0(Created_Week_Ending, "__", word)) %>% #suffix word names for facet ordering
-  group_by(word) %>%
-  mutate(word.top10.freq = n())
+  start.date <- as.Date(start.date)
+  end.date <- as.Date(end.date)
+  
+  df.filtered <- df %>% filter(Created_Date >= start.date & Created_Date <= end.date)
+  df.summaries <- df.filtered %>% group_by(Created_Week_Ending) %>% summarise(week.ir.total = n_distinct(Id))
+  
+  df.prep <- df.filtered %>%
+    group_by(Created_Week_Ending) %>%
+    count(word, sort = TRUE) %>%
+    top_n(top.x.words, wt = n) %>%
+    mutate(week.top.10 = row_number()) %>%
+    filter(week.top.10 <= top.x.words) %>%
+    ungroup() %>%
+    mutate(wordorder = nrow(.):1) %>%
+    mutate(facet.words = paste0(Created_Week_Ending, "__", word)) %>% #suffix word names for facet ordering
+    group_by(word) %>%
+    mutate(word.top10.freq = n()) %>%
+    dplyr::left_join(y = df.summaries, by = "Created_Week_Ending")
+  
+  # Plot
+  p <- df.prep %>%
+    ggplot(aes(reorder(facet.words, rev(wordorder)), n, fill = word, label = n)) +
+    theme_bw() + 
+    geom_bar(stat = "identity", color = "black") +
+    facet_wrap(~paste("Week Ending", format(Created_Week_Ending, "%m-%d-%Y"), week.ir.total), scales = "free_x") +
+    labs(x = "Word", y = "Frequency", title = "Most Common Words - last 2 weeks") +
+    theme(legend.position = "none") +
+    scale_x_discrete(labels = function(x) gsub("^.+__", "", x)) +
+    geom_label() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "none") #+ labs(caption = "test text")
+  
+  return(p)
+}
+test.function.words(em.tidy.unigrams, two.mondays.ago, last.sunday, 10)
 
-# replicate w/ window funcs; get all calcs in 1 dataframe
-a.uni <- em.tidy.unigrams %>%
-  filter(Created_Date >= two.mondays.ago & Created_Date <= last.sunday) %>%
-  group_by(Created_Week_Ending) %>%
-  mutate(week.ir.total = n_distinct(Id)) %>%
-  group_by(Created_Week_Ending, word) %>%
-  mutate(n = n()) %>%
-  summarise(n = mean(n), week.ir.total = mean(week.ir.total)) %>% 
-  arrange(Created_Week_Ending, desc(n)) %>%
-  top_n(10, wt = n) %>%
-  mutate(week.top.10 = row_number()) %>%
-  filter(week.top.10 <= 10) %>%
-  ungroup() %>%
-  mutate(wordorder = nrow(.):1) %>%
-  mutate(facet.words = paste0(Created_Week_Ending, "__", word)) %>% #suffix word names for facet ordering
-  group_by(word) %>%
-  mutate(word.top10.freq = n()) 
+
+
+
+
+#### filter, plot, annotation function test ####
+
+  ## join summary and plot dataset
+
+  # onepos unigrams - summary, annotation calcs, plot
+  a.uni.weektot <- em.tidy.unigrams %>% filter(Created_Date >= two.mondays.ago & Created_Date <= last.sunday) %>%
+    group_by(Created_Week_Ending) %>% summarise(week.ir.total = n_distinct(Id))
+
+  # main plot
+  a.uni.1 <- em.tidy.unigrams %>%
+    filter(Created_Date >= two.mondays.ago & Created_Date <= last.sunday) %>%
+    group_by(Created_Week_Ending, word) %>%
+    summarise(n = n()) %>% 
+    arrange(desc(n)) %>%
+    top_n(10, wt = n) %>%
+    mutate(week.top.10 = row_number()) %>%
+    filter(week.top.10 <= 10) %>%
+    ungroup() %>%
+    mutate(wordorder = nrow(.):1) %>%
+    mutate(facet.words = paste0(Created_Week_Ending, "__", word)) %>% #suffix word names for facet ordering
+    group_by(word) %>%
+    mutate(word.top10.freq = n()) 
+  
+  # join summaries to plot
+  a.uni.2 <- a.uni.1 %>% left_join(y = a.uni.weektot, by = "Created_Week_Ending")
+  
+  # get total distinct IRs in top 10 word list
+  a.uni.3 <- a.uni.2 %>% left_join(y = em.tidy.unigrams, by = c("Created_Week_Ending", "word")) %>%
+    group_by(Created_Week_Ending) %>%
+    summarise(top.10.ir.count = n_distinct(Id))
+  
+  # join distinct IR total to plotting dataset
+  a.uni.4 <- a.uni.2 %>% left_join(y = a.uni.3, by = "Created_Week_Ending")
 
 # plot is fine
-  a.uni %>%
+  a.uni.4 %>%
   ggplot(aes(reorder(facet.words, rev(wordorder)), n, fill = word, label = n)) +
   theme_bw() + 
   geom_bar(stat = "identity", color = "black") +
-  facet_wrap(~paste("Week Ending", format(Created_Week_Ending, "%m-%d-%Y")), scales = "free_x") +
+  facet_wrap(~paste("Week Ending", 
+                    format(Created_Week_Ending, "%m-%d-%Y"), "\n Total IRs:",week.ir.total, 
+                    "IRs in top 10:", top.10.ir.count, 
+                    percent(round(top.10.ir.count / week.ir.total, 2))), scales = "free_x") +
   labs(x = "Word", y = "Frequency", title = "Most Common Words - last 2 weeks") +
   theme(legend.position = "none") +
   scale_x_discrete(labels = function(x) gsub("^.+__", "", x)) +
   geom_label() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "none") #+ labs(caption = "test text")
+  theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "none") #+ labs(caption = "test text") +
+  ggplot2::annotate("text", label = a.uni.weektot$week.ir.total[])
 
 
-annotation.df.test$Created_Week_Ending[1]
-annotation.df.test$week.ir.total[1]
+a.uni.2$Created_Week_Ending[]
+a.uni.weektot$week.ir.total[]
+a.uni.2$week.ir.total[1]
 
 
 
