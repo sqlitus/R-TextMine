@@ -369,20 +369,22 @@ WordTrendRate <- function(df, START_DATE, END_DATE, min_freq, top_x){
     ggplot(aes(x = reorder(ord.term, wordorder), y = word.week.total, color = word)) + # label = paste0(round(word.week.total,0),"x")
     theme_bw() +
     geom_point(aes(size = word.week.trend, color = word), alpha = .5) +
+    geom_point(aes(x = reorder(ord.term, wordorder), y = word.week.avg, size = word.week.avg), alpha = .3) +
     # geom_text(aes(label=paste0(round(word.week.trend, 0),"x")),color = "black", size = 3) +
     facet_wrap(~Created_Week_Ending, scales = "free_x") +
     labs(x = "Word", y = "Frequency", title = "Words Trending Up", subtitle = paste("With",min_freq,"or more weekly occurrences")) +
-    # theme(legend.position = "none") +
     scale_x_discrete(labels = function(x) gsub("^.+__", "", x)) +
     # geom_label() +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-    guides(color = FALSE, size = guide_legend(title = "Trend Rate")) +
-    scale_size_continuous(range = c(5, 25)) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "none") +
+    # guides(color = FALSE, size = guide_legend(title = "Trend Rate")) +
+    scale_size_continuous(range = c(5, 25))
     # scale_size_area(breaks = pretty(df$word.week.trend, n = 5)) +
-    scale_y_continuous(breaks = pretty(df$word.week.total, n = 6))
+    # scale_y_continuous(breaks = pretty(df$word.week.total, n = 6))
+    
   
   return(df.p)
 }
+WordTrendRate(em.tidy.unigrams, two.mondays.ago, last.sunday, min_freq = 5, top_x = 10)
 WordTrendRate(em.tidy.unigrams, two.mondays.ago, last.sunday, min_freq = 1, top_x = 10)
 ggsave(paste0("Words Trending Up - 1 or more", Sys.Date(), ".bmp"), width = my.w, height = my.h, units = ("in"))
 WordTrendRate(em.tidy.unigrams, two.mondays.ago, last.sunday, min_freq = 5, top_x = 10)
