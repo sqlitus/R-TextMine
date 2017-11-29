@@ -22,43 +22,53 @@ ggplot(char.ttr, aes(Time_to_Response__M_)) + geom_histogram(aes(y = ..count../s
 
 #### text function words: clean, summarize, plot, annotate ####
 
-# top x unigrams 
-test.function.words <- function(df, start.date, end.date, top.x.words){
+# top x unigrams; optional faceting
+test.function.words <- function(df, start.date, end.date, top.x.words, facet){
 
   start.date <- as.Date(start.date)
   end.date <- as.Date(end.date)
   
   df.filtered <- df %>% filter(Created_Date >= start.date & Created_Date <= end.date)
-  df.summaries <- df.filtered %>% group_by(Created_Week_Ending) %>% summarise(week.ir.total = n_distinct(Id))
+  df.summaries <- df.filtered %>% group_by_(facet) %>% summarise(week.ir.total = n_distinct(Id))
   
   df.prep <- df.filtered %>%
-    group_by(Created_Week_Ending) %>%
+    group_by_(facet) %>%
     count(word, sort = TRUE) %>%
     top_n(top.x.words, wt = n) %>%
     mutate(week.top.10 = row_number()) %>%
     filter(week.top.10 <= top.x.words) %>%
     ungroup() %>%
     mutate(wordorder = nrow(.):1) %>%
-    mutate(facet.words = paste0(Created_Week_Ending, "__", word)) %>% #suffix word names for facet ordering
+    mutate(facet.words = paste0(facet, "__", word)) %>% #suffix word names for facet ordering # !! dynamic col referen
     group_by(word) %>%
     mutate(word.top10.freq = n()) %>%
-    dplyr::left_join(y = df.summaries, by = "Created_Week_Ending")
+    dplyr::left_join(y = df.summaries, by = "facet")
   
   # Plot
   p <- df.prep %>%
     ggplot(aes(reorder(facet.words, rev(wordorder)), n, fill = word, label = n)) +
     theme_bw() + 
     geom_bar(stat = "identity", color = "black") +
-    facet_wrap(~paste("Week Ending", format(Created_Week_Ending, "%m-%d-%Y"), week.ir.total), scales = "free_x") +
     labs(x = "Word", y = "Frequency", title = "Most Common Words - last 2 weeks") +
     theme(legend.position = "none") +
     scale_x_discrete(labels = function(x) gsub("^.+__", "", x)) +
     geom_label() +
     theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "none") #+ labs(caption = "test text")
   
+    if (!missing(facet)){
+      if (facet == "Created_Week_Ending"){
+        p <- p + facet_wrap(~paste("Week Ending", format(Created_Week_Ending, "%m-%d-%Y"), week.ir.total), 
+                            scales = "free_x")
+      } else {
+        p <- p + facet_wrap(as.formula(paste("~", facet)))        
+      }
+    }
+
+    
   return(p)
 }
-test.function.words(em.tidy.unigrams, two.mondays.ago, last.sunday, 10)
+test.function.words(em.tidy.unigrams, two.mondays.ago, last.sunday, 10, "Created_Week_Ending")
+
 
 
 
