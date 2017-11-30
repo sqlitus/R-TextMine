@@ -341,7 +341,7 @@ top.x.unigrams.day.p  ## weirdly concats MPOS to MPO, only here
 ## BUBBLING UP WORDS - by week total vs week avg of entire dataset ##
 
 # word week trend: 1 = 100% of normal rate, 2 = 2x or 200% of normal rate, 20 = 2000% of normal rate (20 times more than norm)
-WordTrendRate <- function(df, START_DATE, END_DATE, min_freq, top_x){
+WordTrendRateUp <- function(df, START_DATE, END_DATE, min_freq, top_x){
   
   # should be week start (Monday) and end (Sunday) for weekly analysis
   START_DATE <- as.Date(START_DATE)
@@ -384,10 +384,10 @@ WordTrendRate <- function(df, START_DATE, END_DATE, min_freq, top_x){
   
   return(df.p)
 }
-WordTrendRate(em.tidy.unigrams, two.mondays.ago, last.sunday, min_freq = 5, top_x = 10)
-WordTrendRate(em.tidy.unigrams, two.mondays.ago, last.sunday, min_freq = 1, top_x = 10)
+WordTrendRateUp(em.tidy.unigrams, two.mondays.ago, last.sunday, min_freq = 5, top_x = 10)
+WordTrendRateUp(em.tidy.unigrams, two.mondays.ago, last.sunday, min_freq = 1, top_x = 10)
 ggsave(paste0("Words Trending Up - 1 or more", Sys.Date(), ".bmp"), width = my.w, height = my.h, units = ("in"))
-WordTrendRate(em.tidy.unigrams, two.mondays.ago, last.sunday, min_freq = 5, top_x = 10)
+WordTrendRateUp(em.tidy.unigrams, two.mondays.ago, last.sunday, min_freq = 5, top_x = 10)
 ggsave(paste0("Words Trending Up - 5 or more", Sys.Date(), ".bmp"), width = my.w, height = my.h, units = ("in"))
 
 

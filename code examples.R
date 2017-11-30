@@ -1,3 +1,59 @@
+#### trending words up & down - return as list ####
+test.WordTrendRateUp <- function(df, START_DATE, END_DATE, min_freq, top_x){
+  
+  # should be week start (Monday) and end (Sunday) for weekly analysis
+  START_DATE <- as.Date(START_DATE)
+  END_DATE <- as.Date(END_DATE)
+  
+  # dataset to return
+  df.return <- df %>%
+    filter(Created_Date >= START_DATE & Created_Date <= END_DATE) %>%
+    filter(word.week.total >= min_freq) %>%
+    arrange(Created_Week_Ending, desc(word.week.trend, desc(word.week.total)))
+    
+  # Calcs
+  df.p <- df %>%
+    filter(Created_Date >= START_DATE & Created_Date <= END_DATE) %>%
+    group_by(Created_Week_Ending, word) %>%
+    summarize(word.week.trend = mean(word.week.trend), word.week.avg = mean(word.week.avg),
+              word.week.total = mean(word.week.total), word.population.total = mean(word.population.total), 
+              num.weeks = mean(num.weeks)) %>%
+    filter(word.week.total >= min_freq) %>%
+    arrange(Created_Week_Ending, desc(word.week.trend, desc(word.week.total))) %>%
+    top_n(top_x, wt = word.week.trend) %>%
+    mutate(week.top.10 = row_number()) %>%
+    filter(week.top.10 <= top_x) %>%
+    arrange(Created_Week_Ending, desc(word.week.total), desc(word.week.trend)) %>% # reorder by freq. for plot
+    ungroup() %>%
+    mutate(wordorder = 1:nrow(.)) %>%
+    mutate(ord.term = paste(Created_Week_Ending,"__", word, sep = ""))
+  
+  # Plot
+  p <- df.p %>%
+    ggplot(aes(x = reorder(ord.term, wordorder), y = word.week.total, color = word)) + # label = paste0(round(word.week.total,0),"x")
+    theme_bw() +
+    geom_point(aes(size = word.week.trend, color = word), alpha = .5) +
+    geom_point(aes(x = reorder(ord.term, wordorder), y = word.week.avg, size = word.week.avg), alpha = .3) +
+    # geom_text(aes(label=paste0(round(word.week.trend, 0),"x")),color = "black", size = 3) +
+    facet_wrap(~Created_Week_Ending, scales = "free_x") +
+    labs(x = "Word", y = "Frequency", title = "Words Trending Up", subtitle = paste("With",min_freq,"or more weekly occurrences")) +
+    scale_x_discrete(labels = function(x) gsub("^.+__", "", x)) +
+    # geom_label() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "none") +
+    # guides(color = FALSE, size = guide_legend(title = "Trend Rate")) +
+    scale_size_continuous(range = c(5, 25))
+  # scale_size_area(breaks = pretty(df$word.week.trend, n = 5)) +
+  # scale_y_continuous(breaks = pretty(df$word.week.total, n = 6))
+  
+  
+  return(list(p, df.return))
+}
+# get element of list from function
+test.WordTrendRateUp(em.tidy.unigrams, two.mondays.ago, last.sunday, min_freq = 5, top_x = 10)
+test.df <- test.WordTrendRateUp(em.tidy.unigrams, two.mondays.ago, last.sunday, min_freq = 5, top_x = 10)[[2]]
+
+
+
 #### char math: time to response ####
 
 char.ttr <- read.delim("clipboard")
