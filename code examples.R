@@ -603,4 +603,26 @@ DATA.top9 <- data.frame(DATA, top9, check.names = FALSE) #put it together
 ########################################################################
 
 
+library(tidyverse)
 
+#### EDA #####
+
+# top 10 words up & down compared to average - refer to uc sentiment
+
+test.data.1 <- data_frame(word = letters[1:20], trendrate = rnorm(20), avg.trendrate = rnorm(20))
+test.data.1 <- test.data.1 %>%
+  arrange(desc(abs(trendrate))) %>% # most extreme values
+  head(20) %>%
+  arrange(trendrate) # then order
+
+ggplot(test.data.1) + # have to explicitly order
+  geom_bar(aes(x = reorder(word, trendrate), y = trendrate, fill = trendrate > 0), stat = "identity") +
+  geom_point(aes(x = reorder(word, trendrate), y = avg.trendrate, color = "something"), size = 8) +
+  labs(x = "Word", y = "Trend Rate", legend = "test", title = "Top X issues up and down", subtitle = "subtitle") +
+  coord_flip()
+  
+
+
+
+# single word over time analysis w/ input
+# function for entire word analysis
