@@ -266,11 +266,16 @@ ggsave(paste0("Top 10 Incident Types L2W - ", Sys.Date(), ".png"), width = my.w,
 
 Annotations.OnePOS <- function(df){
   # get distinct weeks & totals
-  x <- df %>% group_by(Created_Week_Ending) %>% distinct(week.ir.total, .keep_all = TRUE)
+  x <- df %>% group_by(Created_Week_Ending) %>% distinct(week.ir.total, .keep_all = TRUE) %>%
+    mutate(identified.percent = round(week.total.identified / week.ir.total, 2)) %>%
+    mutate(top.10.percent = round(week.total.in.top.10 / week.ir.total, 2))
   
   # produce annotations for each week
   for (i in 1:length(x$Created_Week_Ending)){
     paste(x$Created_Week_Ending[i], "week ir total:", x$week.ir.total[i]) %>% print()
+    paste(x$Created_Week_Ending[i], "week total # identified:", x$week.total.identified[i], x$identified.percent[i]) %>% print()
+    paste(x$Created_Week_Ending[i], "week total in top 10:", x$week.total.in.top.10[i], x$top.10.percent[i]) %>% print()
+    print("")
   }
 }
 Annotations.OnePOS(top.x.ticket.types.l2w)
