@@ -387,24 +387,44 @@ WordTrendRateUp <- function(df, START_DATE, END_DATE, min_freq, top_x){
     # scale_y_continuous(breaks = pretty(df$word.week.total, n = 6))
     
   
-  return(df.p)
+  return(list(WordTrendRate.df = df, df.p))
+  # return(WordTrendRate.df = df)
 }
 WordTrendRateUp(em.tidy.unigrams, two.mondays.ago, last.sunday, min_freq = 5, top_x = 10)
+WordTrendRateUp(em.tidy.unigrams, two.mondays.ago, last.sunday, min_freq = 5, top_x = 10)[[1]] %>% View(title = "TrendWords")
+
 WordTrendRateUp(em.tidy.unigrams, two.mondays.ago, last.sunday, min_freq = 1, top_x = 10)
 ggsave(paste0("Words Trending Up - 1 or more", Sys.Date(), ".bmp"), width = my.w, height = my.h, units = ("in"))
 WordTrendRateUp(em.tidy.unigrams, two.mondays.ago, last.sunday, min_freq = 5, top_x = 10)
 ggsave(paste0("Words Trending Up - 5 or more", Sys.Date(), ".bmp"), width = my.w, height = my.h, units = ("in"))
 
 
-#### Word Cloud - full time period ####
+#### Word Cloud ####
 
-## maybe a word cloud better for bubbling up words ....
+Wordcloud.unigrams <- function(unigrams.df, START_DATE, END_DATE, word.max){
+  START_DATE <- as.Date(START_DATE)
+  END_DATE <- as.Date(END_DATE)
+  unigrams.df <- unigrams.df %>%
+  filter(Created_Date >= START_DATE & Created_Date <= END_DATE)
+  
+  o1 <- brewer.pal(8, "Dark2")[unique(factor(unigrams.df$LAST_SUPPORT_GROUP))]
+  o2 <- wordcloud(unigrams.df$word, max.words = word.max, random.order = FALSE, random.color = FALSE,
+            colors = brewer.pal(8, "Dark2")[factor(unigrams.df$LAST_SUPPORT_GROUP)]) 
+    # legend("topright", legend = levels(factor(unigrams.df$LAST_SUPPORT_GROUP)), 
+    #        text.col=brewer.pal(8, "Dark2")[unique(factor(unigrams.df$LAST_SUPPORT_GROUP))])
+  return(list(Wordcloud.df = unigrams.df, colors = o1, wordcloud = o2))
+}
 
-# word cloud ^ ---- should make this for a month
-wordcloud(top.x.unigrams.bubbling.up.l2w$word, top.x.unigrams.bubbling.up.l2w$word.week.trend, c(3,.2),
-          random.order = FALSE)
+# Wordcloud.unigrams(em.tidy.unigrams, "2017-11-04", "2017-11-10", 100)
+Wordcloud.unigrams(em.tidy.unigrams, four.mondays.ago, last.sunday, 100)
 
-#### need to make color gradient
+# View dataframe & write to file.
+# Wordcloud.unigrams(em.tidy.unigrams, four.mondays.ago, last.sunday, 100)[[1]] %>% View(title = "wordcloud.df")
+# Wordcloud.unigrams(em.tidy.unigrams, four.mondays.ago, last.sunday, 100)[[1]] %>%
+#   write.csv(file = paste("wordcloud dataset - ", Sys.Date(), ".csv", sep = ""))
 
 
-
+# write.csv(em.aloha,
+#           file = paste("Aloha issues last 2 weeks - ", Sys.Date(), ".csv", sep = ""),
+#           row.names = FALSE,
+#           na = "")

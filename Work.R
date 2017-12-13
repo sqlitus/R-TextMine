@@ -72,7 +72,9 @@ ipak(c("ggplot2", "tm", "sqldf", "scales","chron", "tidytext", "tidyr","dplyr","
 
 
 
-
+#### Environment & object management ####
+print(object.size(em.tidy.unigrams), units = "auto")
+print(object.size(library), units = "MB")
 
 
 
@@ -88,7 +90,7 @@ mybrowser <- remoteDriver()
 mybrowser$open()
 mybrowser$navigate("http://www.weather.gov")
 
-
+vignette('RSelenium-basics')
 
 #### 11/8/2017 - importing excel/sheets by file search ####
 
