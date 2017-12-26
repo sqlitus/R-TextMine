@@ -164,7 +164,7 @@ aloha.top.down.p <- aloha.top.down %>%
   theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "none")
 
 aloha.top.down.p
-ggsave(paste0("Aloha Ticket Types by Created Week L2W - ", Sys.Date(), ".bmp"), width = my.w, height = my.h, units = ("in"))
+ggsave(paste0("Aloha Ticket Types by Created Week L2W - ", Sys.Date(), ".png"), width = my.w, height = my.h, units = ("in"))
 
 
 # write.csv(em.aloha,
@@ -218,7 +218,7 @@ aloha.top.10.p <- aloha.top.10 %>%
   theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "none")
 
 aloha.top.10.p
-ggsave(paste0("Aloha Most Common Words L2W - ", Sys.Date(), ".bmp"), width = my.w, height = my.h, units = ("in"))
+ggsave(paste0("Aloha Most Common Words L2W - ", Sys.Date(), ".png"), width = my.w, height = my.h, units = ("in"))
 
 # IR list of the top terms...NOT PERFECT - PULLING ALL TICKETS WITH ANY MATCHING TOP 10 WORDS
 ir.list.aloha.top.10.words.l2w <- em.aloha %>%
@@ -394,9 +394,9 @@ WordTrendRateUp(em.tidy.unigrams, two.mondays.ago, last.sunday, min_freq = 5, to
 WordTrendRateUp(em.tidy.unigrams, two.mondays.ago, last.sunday, min_freq = 5, top_x = 10)[[1]] %>% View(title = "TrendWords")
 
 WordTrendRateUp(em.tidy.unigrams, two.mondays.ago, last.sunday, min_freq = 1, top_x = 10)
-ggsave(paste0("Words Trending Up - 1 or more", Sys.Date(), ".bmp"), width = my.w, height = my.h, units = ("in"))
+ggsave(paste0("Words Trending Up - 1 or more", Sys.Date(), ".png"), width = my.w, height = my.h, units = ("in"))
 WordTrendRateUp(em.tidy.unigrams, two.mondays.ago, last.sunday, min_freq = 5, top_x = 10)
-ggsave(paste0("Words Trending Up - 5 or more", Sys.Date(), ".bmp"), width = my.w, height = my.h, units = ("in"))
+ggsave(paste0("Words Trending Up - 5 or more", Sys.Date(), ".png"), width = my.w, height = my.h, units = ("in"))
 
 
 #### Word Cloud ####

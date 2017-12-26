@@ -149,7 +149,7 @@ aloha.top.down.p <- aloha.top.down %>%
   ggplot(aes(reorder(Aloha_Ticket_Type, week.top.10), n, fill = Aloha_Ticket_Type, label = n)) +
   geom_bar(stat = "identity", color = "black") +
   theme_bw() +
-  labs(x = "Aloha Issues", y = "Frequency", title = "Aloha Ticket Types by Last 4 Weeks") +
+  labs(x = "Aloha Incident Types", y = "Frequency", title = "Aloha Ticket Types by Last 4 Weeks") +
   geom_label() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "none")
 
