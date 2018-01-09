@@ -157,7 +157,7 @@ aloha.top.down.p <- aloha.top.down %>%
   ggplot(aes(reorder(ord.term, wordorder), n, fill = Aloha_Ticket_Type, label = n)) +
   geom_bar(stat = "identity", color = "black") +
   theme_bw() +
-  facet_wrap(~paste("Week Ending", format(Created_Week_Ending, "%m-%d-%Y")), scales = "free_x") + # scales arg necessary for diff words
+  facet_wrap(~paste("Week Ending", Created_Week_Ending), scales = "free_x") + # scales arg necessary for diff words
   labs(x = "Aloha Issues", y = "Frequency", title = "Aloha Ticket Types by Created Week") +
   scale_x_discrete(labels = function(x) gsub("^.+__", "", x)) +
   geom_label() +
@@ -211,7 +211,7 @@ aloha.top.10.p <- aloha.top.10 %>%
   ggplot(aes(reorder(ord.term, rev(wordorder)), n, fill = word, label = n)) +
   theme_bw() +
   geom_bar(stat = "identity", color = "black") +
-  facet_wrap(~paste("Week Ending", format(Created_Week_Ending, "%m-%d-%Y")), scales = "free_x") + # scales arg necessary for diff words
+  facet_wrap(~paste("Week Ending", Created_Week_Ending), scales = "free_x") + # scales arg necessary for diff words
   labs(x = "Word", y = "Frequency", title = "Aloha - Most Common Words by Created Week") +
   scale_x_discrete(labels = function(x) gsub("^.+__", "", x)) +
   geom_label() +
@@ -252,7 +252,7 @@ top.x.ticket.types.l2w.plot <- top.x.ticket.types.l2w %>%
   ggplot(aes(reorder(facet.words, rev(wordorder)), n, fill = Incident_Type, label = n)) +
   theme_bw() + 
   geom_bar(stat = "identity", color = "black") +
-  facet_wrap(~paste("Week Ending", format(Created_Week_Ending, "%m-%d-%Y")), scales = "free_x") +
+  facet_wrap(~paste("Week Ending", Created_Week_Ending), scales = "free_x") +
   labs(x = "Incident Type", y = "# of IRs", title = "Top 10 Incident Types - last 2 weeks") +
   theme(legend.position = "none") +
   scale_x_discrete(labels = function(x) gsub("^.+__", "", x)) +
@@ -302,7 +302,7 @@ top.x.unigrams.l2w.plot <- top.x.unigrams.l2w %>%
   ggplot(aes(reorder(facet.words, rev(wordorder)), n, fill = word, label = n)) +
   theme_bw() + 
   geom_bar(stat = "identity", color = "black") +
-  facet_wrap(~paste("Week Ending", format(Created_Week_Ending, "%m-%d-%Y")), scales = "free_x") +
+  facet_wrap(~paste("Week Ending", Created_Week_Ending), scales = "free_x") +
   labs(x = "Word", y = "Frequency", title = "Most Common Words - last 2 weeks") +
   theme(legend.position = "none") +
   scale_x_discrete(labels = function(x) gsub("^.+__", "", x)) +
