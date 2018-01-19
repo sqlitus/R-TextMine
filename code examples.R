@@ -1,3 +1,70 @@
+
+
+# -------------
+# 1/18/2018 - ONLINE EXAMPLE BELOW FOR PHRASES
+# -------------
+
+
+test <- v.data %>% unnest_tokens(bigram, POS.Readiness.Status, token = "ngrams", n = 2) %>% count(bigram, sort = TRUE)
+test
+names(test) <- c("Words", "LenNorm")
+names(test)
+GetPrunedList <- function(wordfreqdf, prune_thru = 100) {
+  #take only first n items in list
+  tmp <- head(wordfreqdf, n = prune_thru) %>%
+    select(ngrams = Words, tfidfXlength = LenNorm)
+  #for each ngram in list:
+  t <- (lapply(1:nrow(tmp), function(x) {
+    #find overlap between ngram and all items in list (overlap = TRUE)
+    idx <- overlap(tmp[x, "ngrams"], tmp$ngrams)
+    #set overlap as false for itself and higher-scoring ngrams
+    idx[1:x] <- FALSE
+    idx
+  }))
+  
+  #bind each ngram's overlap vector together to make a matrix
+  t2 <- do.call(cbind, t)   
+  
+  #find rows(i.e. ngrams) that do not overlap with those below
+  idx <- rowSums(t2) == 0
+  pruned <- tmp[idx,]
+  rownames(pruned) <- NULL
+  pruned
+}
+
+#' overlap
+#' OBJ: takes two ngrams (as strings) and to see if they overlap
+#' INPUT: a,b ngrams as strings
+#' OUTPUT: TRUE if overlap
+overlap <- function(a, b) {
+  max_overlap <- min(3, CountWords(a), CountWords(b))
+  
+  a.beg <- word(a, start = 1L, end = max_overlap)
+  a.end <- word(a, start = -max_overlap, end = -1L)
+  b.beg <- word(b, start = 1L, end = max_overlap)
+  b.end <- word(b, start = -max_overlap, end = -1L)
+  
+  # b contains a's beginning
+  w <- str_detect(b, coll(a.beg, TRUE))
+  # b contains a's end
+  x <- str_detect(b, coll(a.end, TRUE))
+  # a contains b's beginning
+  y <- str_detect(a, coll(b.beg, TRUE))
+  # a contains b's end
+  z <- str_detect(a, coll(b.end, TRUE))
+  
+  #return TRUE if any of above are true
+  (w | x | y | z)
+}
+
+
+GetPrunedList(test)
+# -------------------
+# END PHRASES EXAMPLE
+# -------------------
+
+
+
 #### trending words up & down - return as list ####
 test.WordTrendRateUp <- function(df, START_DATE, END_DATE, min_freq, top_x){
   

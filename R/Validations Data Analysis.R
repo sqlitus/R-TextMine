@@ -58,65 +58,23 @@ View(master)
 
 
 
+# Failed Validations IRs Created ----
 
+fv.data <- readxl::read_excel(path = "C:\\Work\\zRequests\\John Bumgardner\\IRs Created for Failed Validations.xlsx", 
+                              sheet = "data",trim_ws = TRUE)
+str(fv.data)
+names(fv.data)
+ggplot(fv.data, aes(CreatedDate)) + geom_bar()
 
+fv.data %>% unnest_tokens(word, Title) %>% count(word, sort = T)
+fv.data %>% unnest_tokens(bigram, Title, token = "ngrams", n = 2) %>% count(bigram, sort = T)
+fv.data %>% unnest_tokens(bigram, Title, token = "ngrams", n = 3) %>% count(bigram, sort = T)
+fv.data %>% unnest_tokens(bigram, Title, token = "ngrams", n = 4) %>% count(bigram, sort = T) %>% distinct()
+fv.data %>% unnest_tokens(bigram, Title, token = "ngrams", n = 5) %>% count(bigram, sort = T) %>% distinct()
 
-# -------------
-# ONLINE EXAMPLE BELOW
-# -------------
-
-
-test <- v.data %>% unnest_tokens(bigram, POS.Readiness.Status, token = "ngrams", n = 2) %>% count(bigram, sort = TRUE)
-test
-names(test) <- c("Words", "LenNorm")
-names(test)
-GetPrunedList <- function(wordfreqdf, prune_thru = 100) {
-  #take only first n items in list
-  tmp <- head(wordfreqdf, n = prune_thru) %>%
-    select(ngrams = Words, tfidfXlength = LenNorm)
-  #for each ngram in list:
-  t <- (lapply(1:nrow(tmp), function(x) {
-    #find overlap between ngram and all items in list (overlap = TRUE)
-    idx <- overlap(tmp[x, "ngrams"], tmp$ngrams)
-    #set overlap as false for itself and higher-scoring ngrams
-    idx[1:x] <- FALSE
-    idx
-  }))
-  
-  #bind each ngram's overlap vector together to make a matrix
-  t2 <- do.call(cbind, t)   
-  
-  #find rows(i.e. ngrams) that do not overlap with those below
-  idx <- rowSums(t2) == 0
-  pruned <- tmp[idx,]
-  rownames(pruned) <- NULL
-  pruned
-}
-
-#' overlap
-#' OBJ: takes two ngrams (as strings) and to see if they overlap
-#' INPUT: a,b ngrams as strings
-#' OUTPUT: TRUE if overlap
-overlap <- function(a, b) {
-  max_overlap <- min(3, CountWords(a), CountWords(b))
-  
-  a.beg <- word(a, start = 1L, end = max_overlap)
-  a.end <- word(a, start = -max_overlap, end = -1L)
-  b.beg <- word(b, start = 1L, end = max_overlap)
-  b.end <- word(b, start = -max_overlap, end = -1L)
-  
-  # b contains a's beginning
-  w <- str_detect(b, coll(a.beg, TRUE))
-  # b contains a's end
-  x <- str_detect(b, coll(a.end, TRUE))
-  # a contains b's beginning
-  y <- str_detect(a, coll(b.beg, TRUE))
-  # a contains b's end
-  z <- str_detect(a, coll(b.end, TRUE))
-  
-  #return TRUE if any of above are true
-  (w | x | y | z)
-}
-
-
-GetPrunedList(test)
+# confirming if 3_.1.4 is 3 1/2
+fv.data %>% filter(grepl("(?i)failed.*3.*1.4.2", fv.data$Title)) %>% View()
+fv.data %>% filter(grepl("(?i)failed.*3.{0,8}1.1", fv.data$Title))
+fv.data %>% filter(grepl("(?i)failed.*3.*1.3", fv.data$Title))
+fv.data %>% filter(grepl("(?i)3\\.5.{0,8}hf4\\.2", fv.data$Title)) 
+fv.data %>% filter(grepl("(?i)3\\.5.*hf4\\.2", fv.data$Title), grepl("(?i)failed.*3.*1.1", fv.data$Title)) %>% View()
