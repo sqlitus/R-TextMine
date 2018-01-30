@@ -53,3 +53,27 @@ a4 <- a.t %>% unnest_tokens(word, text, token = "regex", pattern = "[ ]+[^[:spac
   count(word, sort = TRUE)
 a4
 View(a4)
+
+# 1/29/2018 power point w/ ggplot & annotations ----
+library(tidyverse)
+library(officer)
+library(rvg) # graphics into the ppt
+
+setwd("C:\\Work\\Analysis\\OnePOS\\New Weekly Support Deck - 2017")
+getwd()
+
+myslide <- read_pptx("C:\\Work\\Analysis\\OnePOS\\New Weekly Support Deck - 2017\\01_31_2018 refresh.pptx")
+layout_summary(myslide)
+layout_properties(myslide)
+slide_summary(myslide)
+
+myslide %>%
+  add_slide(layout = "Title and Content", master = "1_Office Theme") %>%
+    ph_with_text(type = "title", str = "here is some Title text") %>%
+    ph_with_vg(type = "body", code = print(aloha.top.down.p)) %>%
+  add_slide(layout = "Title and Content", master = "1_Office Theme") %>%
+    ph_with_text(type = "title", str = "phwithvgat") %>%
+    ph_with_vg_at(code = print(aloha.top.down.p), left = .17, top = 1.2, width = 13, height = 6)
+
+print(myslide, target = "myNewPowerPoint.pptx")
+
