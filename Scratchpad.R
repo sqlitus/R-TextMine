@@ -212,7 +212,7 @@ scale_data_phrases <- scale_data_phrases %>%
   # flag row if it is a SINGLE stopword
   mutate(stopword_adjusted = case_when(phrase %in% stop_words$word ~ TRUE)) %>%
   # flag row if it contains ANY stopwords
-  mutate(full_stopword_found = case_when(grepl(paste(paste0("\\b",stop_words$word,"\\b"), collapse = "|"), phrase) ~ "found stopword"))
+  mutate(full_stopword_found = case_when(grepl(paste(paste0("\\b",stop_words$word,"\\b"), collapse="|"), phrase)~"found stopword"))
   # count how many stopwords found ...
   # adj freq by how many stopwords found ...
   # flag if this phrase is fully contained in a higher-scoring phrase
@@ -276,16 +276,40 @@ import_time <- date()
 # FCF / FDR
 ONOW_OnePOS_List$Cdate <- lubridate::date(ONOW_OnePOS_List$Created)
 ONOW_OnePOS_List$Rdate <- lubridate::date(ONOW_OnePOS_List$Resolved)
-ONOW_OnePOS_List$FCF <- case_when(ONOW_OnePOS_List$Cdate == ONOW_OnePOS_List$Rdate & ONOW_OnePOS_List$`Reassignment count` == 0 ~ 1,
+ONOW_OnePOS_List$FCF <- case_when(ONOW_OnePOS_List$Cdate == ONOW_OnePOS_List$Rdate & ONOW_OnePOS_List$`Reassignment count` == 0~1,
                                    TRUE ~ 0)
 ONOW_OnePOS_List$FDR <- case_when(ONOW_OnePOS_List$Cdate == ONOW_OnePOS_List$Rdate ~ 1, TRUE ~ 0)
 
 sum(ONOW_OnePOS_List$FCF, na.rm = TRUE)
 sum(ONOW_OnePOS_List$FDR, na.rm = TRUE)
 
-# grab phase # from title
+# grab phase # from title & other useful fields Tracy mentioned
 ONOW_OnePOS_List$Phase_Num = stringr::str_extract(ONOW_OnePOS_List$`Short description`, "\\d½?[.]\\d[.]\\d")
-
+ONOW_OnePOS_List$BU <- stringr::str_extract(ONOW_OnePOS_List$`Short description`, "\\b\\d\\d\\d\\d\\d\\b")
+ONOW_OnePOS_List$Device_Name <- 
+  stringr::str_extract(ONOW_OnePOS_List$`Short description`, "(?i)wfm\\s?\\d{5}\\s?[a-z]{3}\\s?\\d{2,3}") %>%
+  stringr::str_replace_all("\\s", "") %>%
+  toupper()
+ONOW_OnePOS_List$Lane <- stringr::str_extract(ONOW_OnePOS_List$`Short description`, "(?i)(lane|reg|tab|pck|svr|aha)\\W{0,2}\\d{2,3}") %>%
+  toupper() %>%
+  stringr::str_replace_all("\\W", "") %>%
+  stringr::str_replace("([A-Z])(\\d)", "\\1 \\2")
+View(select(ONOW_OnePOS_List, -`Short description`, everything()))
 
 write.csv(ONOW_OnePOS_List, na = "", row.names = FALSE, "\\\\cewp1650\\Chris Jabr Reports\\ONOW Exports\\ONOW_OnePOS_Metrics.csv")
 
+
+
+# test
+x <- c("one two three", "four five six")
+grep("one|four", x)
+grep("one|our\\b", x)
+grep("one|our", x)
+grep("\\one\\b|\\bsix\\b", x)
+
+
+# lanes vs regs
+lanes <- ONOW_OnePOS_List %>% select(Lane) %>% filter(grepl("REG", Lane)) %>% distinct()
+ONOW_OnePOS_List %>% filter(grepl("REG 06", Lane)) %>% View()
+
+ONOW_OnePOS_List %>% filter(Lane != Lane2) %>% View()
