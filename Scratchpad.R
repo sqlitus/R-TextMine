@@ -290,11 +290,12 @@ ONOW_OnePOS_List$Device_Name <-
   stringr::str_extract(ONOW_OnePOS_List$`Short description`, "(?i)wfm\\s?\\d{5}\\s?[a-z]{3}\\s?\\d{2,3}") %>%
   stringr::str_replace_all("\\s", "") %>%
   toupper()
-ONOW_OnePOS_List$Lane <- stringr::str_extract(ONOW_OnePOS_List$`Short description`, "(?i)(lane|reg|tab|pck|svr|aha)\\W{0,2}\\d{2,3}") %>%
+ONOW_OnePOS_List$Lane <- stringr::str_extract(
+  ONOW_OnePOS_List$`Short description`, "(?i)(lane|reg|tab|pck|svr|aha)\\W{0,2}\\d{2,3}") %>%
   toupper() %>%
   stringr::str_replace_all("\\W", "") %>%
   stringr::str_replace("([A-Z])(\\d)", "\\1 \\2")
-View(select(ONOW_OnePOS_List, -`Short description`, everything()))
+select(ONOW_OnePOS_List, -`Short description`, everything()) %>% View()
 
 write.csv(ONOW_OnePOS_List, na = "", row.names = FALSE, "\\\\cewp1650\\Chris Jabr Reports\\ONOW Exports\\ONOW_OnePOS_Metrics.csv")
 
@@ -312,4 +313,45 @@ grep("\\one\\b|\\bsix\\b", x)
 lanes <- ONOW_OnePOS_List %>% select(Lane) %>% filter(grepl("REG", Lane)) %>% distinct()
 ONOW_OnePOS_List %>% filter(grepl("REG 06", Lane)) %>% View()
 
-ONOW_OnePOS_List %>% filter(Lane != Lane2) %>% View()
+
+
+
+#### Latency analysis for L ----
+library(tidyverse)
+latency.data <- readxl::read_excel(
+  path = "C:\\Work\\Requests\\Lori\\2018-05-01 Latency Issues\\2018-05-01 DATA LatencyReport.xlsx")
+str(latency.data)
+
+# deriving BU from short description's BU# and Machine#
+latency.data$extracted_BU <- stringr::str_extract(latency.data$`Short description`, "\\b\\d\\d\\d\\d\\d\\b")
+latency.data$compare_BU <- case_when(latency.data$BU == latency.data$extracted_BU ~ "same", TRUE ~ "diff")
+latency.data$extracted_DeviceName <- 
+  stringr::str_extract(latency.data$`Short description`, "(?i)wfm\\s?\\d{5}\\s?[a-z]{3}\\s?\\d{2,3}") %>%
+  stringr::str_replace_all("\\s", "") %>% toupper()
+latency.data$extracted_DeviceName_BU <- stringr::str_extract(latency.data$extracted_DeviceName, "\\d\\d\\d\\d\\d")
+latency.data$derived_BU <- case_when(!is.na(latency.data$extracted_BU) ~ latency.data$extracted_BU,
+                                     !is.na(latency.data$extracted_DeviceName_BU) ~ latency.data$extracted_DeviceName_BU,
+                                     TRUE ~ latency.data$BU)
+
+# cleaning excel imported dates: go-live times
+wfm.schedule.data <- readxl::read_excel(
+  path = "C:\\Work\\Requests\\Lori\\2018-05-01 Latency Issues\\WFM Schedule Breakdown - April 30 2018.xlsx")
+
+latency.data.full <- left_join(latency.data, wfm.schedule.data, by = c("derived_BU" = "Business Unit"))
+latency.data.full$`Go-Live_Converted` <- as.Date(as.numeric(latency.data.full$`Go-Live`), origin = "1899-12-30")
+
+# extract reg from short description
+latency.data.full$extracted_Region <- stringr::str_extract(
+  latency.data.full$`Short description`, "CE|FL|MA|MW|NA|NC|NE|PN|RM|SO|SP|SW|TS")
+latency.data.full$derived_Region <- case_when(!is.na(latency.data.full$extracted_Region) ~ latency.data.full$extracted_Region,
+                                              !is.na(latency.data.full$Region.y) ~ latency.data.full$Region.y,
+                                              TRUE ~ latency.data.full$Region.x)
+latency.data.full %>% select(-Region.y, everything()) %>% filter(Region.y != derived_Region | is.na(Region.y)) %>% View()
+
+
+# ngram analysis of short description for common issues - then regex type 
+# slice ticket count by region, location, site completion, go-live date, site type, state....etc
+
+
+
+
