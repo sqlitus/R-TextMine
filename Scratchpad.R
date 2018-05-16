@@ -322,6 +322,7 @@ latency.data <- readxl::read_excel(
   path = "C:\\Work\\Requests\\Lori\\2018-05-01 Latency Issues\\2018-05-01 DATA LatencyReport.xlsx")
 str(latency.data)
 
+
 # deriving BU from short description's BU# and Machine#
 latency.data$extracted_BU <- stringr::str_extract(latency.data$`Short description`, "\\b\\d\\d\\d\\d\\d\\b")
 latency.data$compare_BU <- case_when(latency.data$BU == latency.data$extracted_BU ~ "same", TRUE ~ "diff")
@@ -333,6 +334,7 @@ latency.data$derived_BU <- case_when(!is.na(latency.data$extracted_BU) ~ latency
                                      !is.na(latency.data$extracted_DeviceName_BU) ~ latency.data$extracted_DeviceName_BU,
                                      TRUE ~ latency.data$BU)
 
+
 # cleaning excel imported dates: go-live times
 wfm.schedule.data <- readxl::read_excel(
   path = "C:\\Work\\Requests\\Lori\\2018-05-01 Latency Issues\\WFM Schedule Breakdown - April 30 2018.xlsx")
@@ -340,7 +342,8 @@ wfm.schedule.data <- readxl::read_excel(
 latency.data.full <- left_join(latency.data, wfm.schedule.data, by = c("derived_BU" = "Business Unit"))
 latency.data.full$`Go-Live_Converted` <- as.Date(as.numeric(latency.data.full$`Go-Live`), origin = "1899-12-30")
 
-# extract reg from short description
+
+# extract reg/loc from short description, otherwise extract from original reg/loc field to accurately derive location
 latency.data.full$extracted_Region <- stringr::str_extract(
   latency.data.full$`Short description`, "CE|FL|MA|MW|NA|NC|NE|PN|RM|SO|SP|SW|TS")
 latency.data.full$derived_Region <- case_when(!is.na(latency.data.full$extracted_Region) ~ latency.data.full$extracted_Region,
@@ -348,10 +351,33 @@ latency.data.full$derived_Region <- case_when(!is.na(latency.data.full$extracted
                                               TRUE ~ latency.data.full$Region.x)
 latency.data.full %>% select(-Region.y, everything()) %>% filter(Region.y != derived_Region | is.na(Region.y)) %>% View()
 
+latency.data.full$extracted_Location <- stringr::str_extract(
+  latency.data.full$`Short description`, "(CE|FL|MA|MW|NA|NC|NE|PN|RM|SO|SP|SW|TS)\\W{0,3}[A-z]{3}")
+latency.data.full$extracted_Location_Loc <- stringr::str_sub(latency.data.full$extracted_Location, -3, -1)
 
+latency.data.full$Site_Loc <- stringr::str_sub(latency.data.full$`Site List`, 3, 5)
+latency.data.full$derived_Location <- case_when(!is.na(latency.data.full$extracted_Location_Loc) ~latency.data.full$extracted_Location_Loc,
+                                                !is.na(latency.data.full$Site_Loc) ~ latency.data.full$Site_Loc,
+                                                TRUE ~ latency.data.full$`Store Abbreviation`)
+
+# LEFT OFF: LATENCY DATA FULL DATASET. FOLLOW STEPS FOR ANALYSIS BELOW.
 # ngram analysis of short description for common issues - then regex type 
+
+library(tidytext)
+latency.data.full %>% unnest_tokens(ngram, `Short description`, token = "ngrams", n = 1, drop = FALSE) %>% 
+  distinct() %>% count(ngram, sort = TRUE)
+latency.data.full %>% unnest_tokens(ngram, `Short description`, token = "ngrams", n = 2, drop = FALSE) %>% 
+  distinct() %>% count(ngram, sort = TRUE)
+latency.data.full %>% unnest_tokens(ngram, `Short description`, token = "ngrams", n = 3, drop = FALSE) %>% 
+  distinct() %>% count(ngram, sort = TRUE)
+
+
 # slice ticket count by region, location, site completion, go-live date, site type, state....etc
+write.csv(latency.data.full, na = "", row.names = FALSE, "\\\\cewp1650\\Chris Jabr Reports\\Analysis\\latency_data.csv")
 
+latency.data.full.export <- latency.data.full %>% 
+  select(-c(`Go-Live`, extracted_BU, extracted_DeviceName, extracted_DeviceName_BU, BU, Region.y, 
+            extracted_Region, compare_BU, Site_Loc, extracted_Location, extracted_Location_Loc), 
+         "original_Region" = Region.x, "original_Store_Abbreviation" = `Store Abbreviation`)
 
-
-
+write.csv(latency.data.full.export, na = "", row.names = FALSE, "\\\\cewp1650\\Chris Jabr Reports\\Analysis\\latency_data.csv")
