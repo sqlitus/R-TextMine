@@ -284,7 +284,7 @@ sum(ONOW_OnePOS_List$FCF, na.rm = TRUE)
 sum(ONOW_OnePOS_List$FDR, na.rm = TRUE)
 
 # grab phase # from title & other useful fields Tracy mentioned
-ONOW_OnePOS_List$Phase_Num = stringr::str_extract(ONOW_OnePOS_List$`Short description`, "\\d½?[.]\\d[.]\\d")
+ONOW_OnePOS_List$Phase_Num = stringr::str_extract(ONOW_OnePOS_List$`Short description`, "\\d??[.]\\d[.]\\d")
 ONOW_OnePOS_List$BU <- stringr::str_extract(ONOW_OnePOS_List$`Short description`, "\\b\\d\\d\\d\\d\\d\\b")
 ONOW_OnePOS_List$Device_Name <- 
   stringr::str_extract(ONOW_OnePOS_List$`Short description`, "(?i)wfm\\s?\\d{5}\\s?[a-z]{3}\\s?\\d{2,3}") %>%
@@ -356,7 +356,8 @@ latency.data.full$extracted_Location <- stringr::str_extract(
 latency.data.full$extracted_Location_Loc <- stringr::str_sub(latency.data.full$extracted_Location, -3, -1)
 
 latency.data.full$Site_Loc <- stringr::str_sub(latency.data.full$`Site List`, 3, 5)
-latency.data.full$derived_Location <- case_when(!is.na(latency.data.full$extracted_Location_Loc) ~latency.data.full$extracted_Location_Loc,
+latency.data.full$derived_Location <- case_when(!is.na(latency.data.full$extracted_Location_Loc) ~ 
+                                                  latency.data.full$extracted_Location_Loc,
                                                 !is.na(latency.data.full$Site_Loc) ~ latency.data.full$Site_Loc,
                                                 TRUE ~ latency.data.full$`Store Abbreviation`)
 
@@ -381,3 +382,107 @@ latency.data.full.export <- latency.data.full %>%
          "original_Region" = Region.x, "original_Store_Abbreviation" = `Store Abbreviation`)
 
 write.csv(latency.data.full.export, na = "", row.names = FALSE, "\\\\cewp1650\\Chris Jabr Reports\\Analysis\\latency_data.csv")
+
+
+
+
+
+
+
+
+
+
+## recreate an Extended Metrics export - with more robust R calculations ----
+# FCF etc (asignee change counter, reassignment count, etc)
+# also: approx. string matching categorization for incident typing...(latency issue, etc)
+
+## text analysis
+# approx string matching for spell checking & correcting words, before text aggregation analysis
+# implement phrase algorithm & various measures for common topics. Need to research filtering out strings in a vector.
+
+## historical OVOT reporting
+# modeling? Times stuff sent to RS? feature engineer.
+
+
+# Best practice metric calcualtion / feature engineering. 
+# REQUIRED FIELDS: SHORT DESCRIPTION, BU, LOCATION
+library(tidyverse)
+OnePOS_Incidents_Import <- readxl::read_excel(path = "\\\\cewp1650\\Chris Jabr Reports\\ONOW Exports\\incident.xlsx")
+inc_data <- OnePOS_Incidents_Import
+
+
+inc_data$title_extracted_BU <- str_extract(inc_data$`Short description`, "\\b\\d\\d\\d\\d\\d\\b")
+inc_data$title_extracted_DeviceName <- inc_data$`Short description` %>%
+  str_extract("(?i)wfm\\s?\\d{5}\\s?[a-z]{3}\\s?\\d{2,3}") %>%
+  str_replace_all("\\s", "") %>% toupper()
+inc_data$title_extracted_DeviceName_BU <- str_extract(inc_data$title_extracted_DeviceName, "\\d\\d\\d\\d\\d")
+inc_data$derived_BU <- case_when(
+  !is.na(inc_data$title_extracted_BU) ~ inc_data$title_extracted_BU,
+  !is.na(inc_data$title_extracted_DeviceName_BU) ~ inc_data$title_extracted_DeviceName_BU,
+  TRUE ~ inc_data$BU)
+inc_data$derived_BU_source <- case_when(
+  !is.na(inc_data$title_extracted_BU) ~ "short description BU#",
+  !is.na(inc_data$title_extracted_DeviceName_BU) ~ "short description device name",
+  TRUE ~ "BU field")
+inc_data$derived_Lane <- inc_data$`Short description` %>%
+  str_extract("(?i)(lane|reg|tab|pck|svr|aha)\\W{0,2}\\d{2,3}") %>% toupper() %>%
+  str_replace_all("\\W", "") %>%
+  str_replace("([A-Z])(\\d)", "\\1 \\2")
+inc_data$derived_Phase_Num <- 
+  str_extract(inc_data$`Short description`, "(\\d{1,2}Â½?|\\d[ ]?\\d/\\d)[ ]?[.]\\d[.]\\d")
+inc_data$extracted_Location <- 
+  str_extract(inc_data$`Short description`, "\\b(((?i)(CE|FL|MA|MW|NA|NC|NE|PN|RM|SP|SW|TS))|SO|365)\\b\\W{0,3}[A-z]{3}\\b") %>%
+  toupper()
+inc_data$derived_Location <- case_when(
+  !is.na(inc_data$extracted_Location) ~ inc_data$extracted_Location, TRUE ~ inc_data$Location)
+inc_data$derived_Location_source <- case_when(
+  !is.na(inc_data$extracted_Location) ~ "short description", TRUE ~ "Location field")
+inc_data$derived_Region <- str_sub(inc_data$derived_Location, 1, 2) %>% toupper()
+
+
+filter(inc_data, grepl("[a-z]", inc_data$derived_Location)) %>% View()
+filter(inc_data, is.na(derived_Location)) %>% View()
+filter(inc_data, derived_Region == "36") %>% View()
+filter(inc_data, derived_Region == "TS") %>% View()
+filter(inc_data, grepl("[a-z]", inc_data$derived_Location)) %>% View()
+
+
+# get rid of "builder" columns
+inc_data$title_extracted_BU <- NULL
+inc_data$title_extracted_DeviceName <- NULL
+inc_data$title_extracted_DeviceName_BU <- NULL
+inc_data$extracted_Location <- NULL
+
+
+
+
+
+
+## Spell checking & text mining
+## Incident Assignment History
+library(lubridate)
+OnePOS_Assignments_Import <- readxl::read_excel(path = "\\\\cewp1650\\Chris Jabr Reports\\ONOW Exports\\incident_metric.xlsx")
+
+calendar <- data_frame(date = seq.Date(min(OnePOS_Assignments_Import$Start) %>% date(),
+                                       max(OnePOS_Assignments_Import$Start) %>% date(), by = "days"),
+                       date_dst = seq.POSIXt(min(OnePOS_Assignments_Import$Start),
+                                             max(OnePOS_Assignments_Import$Start), by = "DSTday"),
+                       date_2 = seq.POSIXt(as.POSIXct(paste(min(date(OnePOS_Assignments_Import$Start)), "08"), format = "%Y-%m-%d %H"),
+                                           max(OnePOS_Assignments_Import$Start)+24*60*60, by = "DSTday"))
+
+OnePOS_Assignments_Import %>%
+  filter(Start <= "2018-03-20 08:00:00") %>%
+  View()
+
+ovot <- calendar %>% 
+  left_join()
+
+library(sqldf)
+ovot <- sqldf("select * from calendar")
+str(ovot)
+ovot <- sqldf("select a.*,  count(select * from OnePOS_Assignments_Import 
+      where Start <= a.date_2 and a.date_2 < End) as TotalTickets from calendar as a")
+
+ovot <- sqldf("select a.*, (select max(date) from calendar) as Bob from calendar as a")
+ovot <- sqldf("select a.*, (select max(date) from OnePOS_Assignments_Import) as Bob from calendar as a")
+ovot <- sqldf("select a.*, (select max(date) from calendar) as Bob from calendar as a")
