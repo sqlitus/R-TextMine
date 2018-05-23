@@ -460,7 +460,7 @@ inc_data$extracted_Location <- NULL
 
 ## Spell checking & text mining
 ## Incident Assignment History
-library(lubridate)
+library(tidyverse); library(lubridate)
 OnePOS_Assignments_Import <- readxl::read_excel(path = "\\\\cewp1650\\Chris Jabr Reports\\ONOW Exports\\incident_metric.xlsx")
 
 calendar <- data_frame(date = seq.Date(min(OnePOS_Assignments_Import$Start) %>% date(),
@@ -479,10 +479,35 @@ ovot <- calendar %>%
 
 library(sqldf)
 ovot <- sqldf("select * from calendar")
-str(ovot)
+
 ovot <- sqldf("select a.*,  count(select * from OnePOS_Assignments_Import 
       where Start <= a.date_2 and a.date_2 < End) as TotalTickets from calendar as a")
 
 ovot <- sqldf("select a.*, (select max(date) from calendar) as Bob from calendar as a")
 ovot <- sqldf("select a.*, (select max(date) from OnePOS_Assignments_Import) as Bob from calendar as a")
-ovot <- sqldf("select a.*, (select max(date) from calendar) as Bob from calendar as a")
+
+# add field to calendar - total tickets open at that date
+# sql isn't working
+calendar_plus <- sqldf("select *, count(select * from OnePOS_Assignments_Import as b
+                       where b.Start <= a.date_2 and b.End > a.date_2) as OpenTotal from calendar as a")
+calendar_plus <- sqldf("select *, count() over() from calendar as a")
+
+# vector arithmatic not working yet
+OnePOS_Assignments_Import %>% filter(Start <= min(calendar$date_2) & min(calendar$date_2) < End) %>% nrow()
+calendar_plus <- calendar
+calendar_plus$onepos_total <- OnePOS_Assignments_Import %>% 
+  filter(Start <= calendar_plus$date_2 & calendar_plus$date_2 < End) %>% nrow()
+
+## homeaway meetup #1 - ai and machine learning...
+## dosh analysis
+# cum amount vs days since first visit
+# dosh trees. identifying healthy vs not-healthy trees.
+# time delta.
+# Q: how did you label the data? labeling the accounts as good vs bad? has transactions vs not?
+# sensitivity vs specificity - true positive vs true negative
+# Q: diff graphics engine ggplot?
+# label data? labor intensive
+# labeling almost manually necessary. algorithms do exist tho.
+# all these grpahics with R ...network looking data. structure of this?
+# austin deep learning ...austin big data ___
+# taylor - met at data science meetup.
