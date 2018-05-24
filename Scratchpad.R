@@ -404,7 +404,7 @@ write.csv(latency.data.full.export, na = "", row.names = FALSE, "\\\\cewp1650\\C
 # modeling? Times stuff sent to RS? feature engineer.
 
 
-# Best practice metric calcualtion / feature engineering. 
+# Extended Metrics: Best practice metric calcualtion / feature engineering. 
 # REQUIRED FIELDS: SHORT DESCRIPTION, BU, LOCATION
 library(tidyverse)
 OnePOS_Incidents_Import <- readxl::read_excel(path = "\\\\cewp1650\\Chris Jabr Reports\\ONOW Exports\\incident.xlsx")
@@ -467,36 +467,44 @@ calendar <- data_frame(date = seq.Date(min(OnePOS_Assignments_Import$Start) %>% 
                                        max(OnePOS_Assignments_Import$Start) %>% date(), by = "days"),
                        date_dst = seq.POSIXt(min(OnePOS_Assignments_Import$Start),
                                              max(OnePOS_Assignments_Import$Start), by = "DSTday"),
-                       date_2 = seq.POSIXt(as.POSIXct(paste(min(date(OnePOS_Assignments_Import$Start)), "08"), format = "%Y-%m-%d %H"),
+                       datetime = 
+                         seq.POSIXt(as.POSIXct(paste(min(date(OnePOS_Assignments_Import$Start)), "08"), format = "%Y-%m-%d %H"),
                                            max(OnePOS_Assignments_Import$Start)+24*60*60, by = "DSTday"))
 
-OnePOS_Assignments_Import %>%
-  filter(Start <= "2018-03-20 08:00:00") %>%
-  View()
-
-ovot <- calendar %>% 
-  left_join()
-
-library(sqldf)
-ovot <- sqldf("select * from calendar")
-
-ovot <- sqldf("select a.*,  count(select * from OnePOS_Assignments_Import 
-      where Start <= a.date_2 and a.date_2 < End) as TotalTickets from calendar as a")
-
-ovot <- sqldf("select a.*, (select max(date) from calendar) as Bob from calendar as a")
-ovot <- sqldf("select a.*, (select max(date) from OnePOS_Assignments_Import) as Bob from calendar as a")
-
-# add field to calendar - total tickets open at that date
-# sql isn't working
-calendar_plus <- sqldf("select *, count(select * from OnePOS_Assignments_Import as b
-                       where b.Start <= a.date_2 and b.End > a.date_2) as OpenTotal from calendar as a")
-calendar_plus <- sqldf("select *, count() over() from calendar as a")
-
-# vector arithmatic not working yet
-OnePOS_Assignments_Import %>% filter(Start <= min(calendar$date_2) & min(calendar$date_2) < End) %>% nrow()
 calendar_plus <- calendar
-calendar_plus$onepos_total <- OnePOS_Assignments_Import %>% 
-  filter(Start <= calendar_plus$date_2 & calendar_plus$date_2 < End) %>% nrow()
+calendar_plus$assigned_on_date <- NA
+for (i in 1:nrow(calendar_plus)){
+  calendar_plus$assigned_on_date[i] <- OnePOS_Assignments_Import %>% 
+    filter(Start <= calendar_plus$datetime[i] & (calendar_plus$datetime[i] < End | is.na(End))) %>% nrow()
+}
+
+
+OnePOS_Assignments_Import %>% 
+  filter(Start <= calendar_plus$datetime[1] & (calendar_plus$datetime[1] < End | is.na(End))) %>% nrow()
+inc_state_1 <- readxl::read_excel(path="\\\\cewp1650\\Chris Jabr Reports\\ONOW Exports\\inc_state_1.xlsx")
+inc_state_2 <- readxl::read_excel(path="\\\\cewp1650\\Chris Jabr Reports\\ONOW Exports\\inc_state_2.xlsx")
+inc_state_3 <- readxl::read_excel(path="\\\\cewp1650\\Chris Jabr Reports\\ONOW Exports\\inc_state_3.xlsx")
+inc_state_history <- bind_rows(inc_state_1, inc_state_2, inc_state_3) %>% distinct()
+
+calendar_plus$active_on_date <- NA
+for (i in 1:nrow(calendar_plus)){
+  calendar_plus$active_on_date[i] <- inc_state_history %>% 
+    filter(Start <= calendar_plus$datetime[i] & (calendar_plus$datetime[i] < End | is.na(End))) %>% nrow()
+}
+
+
+# seeing which elements duplicated. Looks like they have same start & end times somehow. Weird.
+test <- bind_rows(inc_state_1, inc_state_2, inc_state_3)
+test %>% group_by(Number, Value, Start, End) %>% summarise(n = n()) %>% filter(n > 1) %>% View()
+
+
+## GET INC STATE & TEAM ASSIGN ON GIVEN DATETIME...
+test <- data_frame()
+bind_rows(OnePOS_Assignments_Import %>% select(Number), inc_state_history %>% select(Number)) %>% distinct()
+# W/ distinct list of ticket, see their status & assignment on calendar dates ... inset into table
+for (i in 1:nrow(calendar_plus)){
+  
+}
 
 ## homeaway meetup #1 - ai and machine learning...
 ## dosh analysis
@@ -509,5 +517,5 @@ calendar_plus$onepos_total <- OnePOS_Assignments_Import %>%
 # label data? labor intensive
 # labeling almost manually necessary. algorithms do exist tho.
 # all these grpahics with R ...network looking data. structure of this?
-# austin deep learning ...austin big data ___
+# austin deep learning ...austin big data 
 # taylor - met at data science meetup.
