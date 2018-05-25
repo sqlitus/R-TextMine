@@ -462,15 +462,18 @@ inc_data$extracted_Location <- NULL
 ## Incident Assignment History
 library(tidyverse); library(lubridate)
 OnePOS_Assignments_Import <- readxl::read_excel(path = "\\\\cewp1650\\Chris Jabr Reports\\ONOW Exports\\incident_metric.xlsx")
+OnePOS_Assignments_Import$Start <- force_tz(OnePOS_Assignments_Import$Start, "US/Central")
+OnePOS_Assignments_Import$End <- force_tz(OnePOS_Assignments_Import$End, "US/Central")
 
+# calendar table
 calendar <- data_frame(date = seq.Date(min(OnePOS_Assignments_Import$Start) %>% date(),
                                        max(OnePOS_Assignments_Import$Start) %>% date(), by = "days"),
-                       date_dst = seq.POSIXt(min(OnePOS_Assignments_Import$Start),
-                                             max(OnePOS_Assignments_Import$Start), by = "DSTday"),
-                       datetime = 
-                         seq.POSIXt(as.POSIXct(paste(min(date(OnePOS_Assignments_Import$Start)), "08"), format = "%Y-%m-%d %H"),
-                                           max(OnePOS_Assignments_Import$Start)+24*60*60, by = "DSTday"))
+                       datetime = seq.POSIXt(as.POSIXct(paste(min(date(OnePOS_Assignments_Import$Start)), "08"), 
+                                                        format = "%Y-%m-%d %H"), 
+                         max(OnePOS_Assignments_Import$Start)+24*60*60, by = "DSTday"))
 
+
+# assignment history
 calendar_plus <- calendar
 calendar_plus$assigned_on_date <- NA
 for (i in 1:nrow(calendar_plus)){
@@ -479,12 +482,14 @@ for (i in 1:nrow(calendar_plus)){
 }
 
 
-OnePOS_Assignments_Import %>% 
-  filter(Start <= calendar_plus$datetime[1] & (calendar_plus$datetime[1] < End | is.na(End))) %>% nrow()
+# active state history
 inc_state_1 <- readxl::read_excel(path="\\\\cewp1650\\Chris Jabr Reports\\ONOW Exports\\inc_state_1.xlsx")
 inc_state_2 <- readxl::read_excel(path="\\\\cewp1650\\Chris Jabr Reports\\ONOW Exports\\inc_state_2.xlsx")
 inc_state_3 <- readxl::read_excel(path="\\\\cewp1650\\Chris Jabr Reports\\ONOW Exports\\inc_state_3.xlsx")
 inc_state_history <- bind_rows(inc_state_1, inc_state_2, inc_state_3) %>% distinct()
+inc_state_history$Start <- force_tz(inc_state_history$Start, "US/Central")
+inc_state_history$End <- force_tz(inc_state_history$End, "US/Central")
+
 
 calendar_plus$active_on_date <- NA
 for (i in 1:nrow(calendar_plus)){
@@ -493,18 +498,22 @@ for (i in 1:nrow(calendar_plus)){
 }
 
 
-# seeing which elements duplicated. Looks like they have same start & end times somehow. Weird.
-test <- bind_rows(inc_state_1, inc_state_2, inc_state_3)
-test %>% group_by(Number, Value, Start, End) %>% summarise(n = n()) %>% filter(n > 1) %>% View()
-
-
-## GET INC STATE & TEAM ASSIGN ON GIVEN DATETIME...
-test <- data_frame()
-bind_rows(OnePOS_Assignments_Import %>% select(Number), inc_state_history %>% select(Number)) %>% distinct()
-# W/ distinct list of ticket, see their status & assignment on calendar dates ... inset into table
+calendar_plus$active_and_assigned <- NA
 for (i in 1:nrow(calendar_plus)){
-  
+  calendar_plus$active_and_assigned[i] <- inc
 }
+
+# creating tables to join & compare...
+OnePOS_Assignments_Import %>% filter(Start <= calendar_plus$datetime[1] & (calendar_plus$datetime[1] < End | is.na(End))) %>% View()
+inc_state_history %>% filter(Start <= calendar_plus$datetime[1] & (calendar_plus$datetime[1] < End | is.na(End))) %>% View()
+# next: join by inc #, etc...
+
+
+
+# reference: timezones
+OlsonNames()
+force_tz(calendar$datetime[1], "US/Central")
+with_tz(calendar$datetime[1], "US/Central")
 
 ## homeaway meetup #1 - ai and machine learning...
 ## dosh analysis
