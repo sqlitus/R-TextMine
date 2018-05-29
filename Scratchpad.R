@@ -509,6 +509,22 @@ inc_state_history %>% filter(Start <= calendar_plus$datetime[1] & (calendar_plus
 # next: join by inc #, etc...
 
 
+## TABLE WITH OVOT
+
+# get list of distinct incidents
+ovot_incidents <- bind_rows(OnePOS_Assignments_Import %>% select(Number), inc_state_history %>% select(Number)) %>% distinct()
+# create result table
+ovot <- data_frame()
+# join across with time & team/status at that time
+ovot_incidents %>% left_join(inc_state_history, by = "Number") %>% 
+  filter(Start <= calendar_plus$datetime[1] & (calendar_plus$datetime[1] < End | is.na(End))) %>%
+  mutate(the_datetime = calendar_plus$datetime[1]) %>%
+  View()
+# insert results into temp table, and continue looping through calendar dates ....
+for (i in 1:nrow(calendar)){
+  
+}
+
 
 # reference: timezones
 OlsonNames()
