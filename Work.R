@@ -72,7 +72,7 @@ ipak(c("ggplot2", "tm", "sqldf", "scales","chron", "tidytext", "tidyr","dplyr","
 
 
 
-#### Environment & object management ####
+#### Environment & object management. How big is an object size ####
 print(object.size(em.tidy.unigrams), units = "auto")
 print(object.size(library), units = "MB")
 
@@ -527,3 +527,4 @@ ggplot(x, aes(x = Created_Month_R, y = Open_To_Resolve_Time__M_, color = Created
 
 
 
+#### 5/23/2018 - new order descending ----

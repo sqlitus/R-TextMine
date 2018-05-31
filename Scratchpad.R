@@ -459,11 +459,18 @@ inc_data$extracted_Location <- NULL
 
 
 ## Spell checking & text mining
-## Incident Assignment History
+
+
+
+# OVOT HISTORICAL BACKLOG REPORT ----
+# Incident Assignment History
 library(tidyverse); library(lubridate)
 OnePOS_Assignments_Import <- readxl::read_excel(path = "\\\\cewp1650\\Chris Jabr Reports\\ONOW Exports\\incident_metric.xlsx")
 OnePOS_Assignments_Import$Start <- force_tz(OnePOS_Assignments_Import$Start, "US/Central")
 OnePOS_Assignments_Import$End <- force_tz(OnePOS_Assignments_Import$End, "US/Central")
+OnePOS_Assignments_Import <- rename(OnePOS_Assignments_Import, Team = Value)
+OnePOS_Assignments_Import <- select(OnePOS_Assignments_Import, -Field)
+OnePOS_Assignments_Import <- rename(OnePOS_Assignments_Import, Start_Team = Start, End_Team = End)
 
 # calendar table
 calendar <- data_frame(date = seq.Date(min(OnePOS_Assignments_Import$Start) %>% date(),
@@ -472,16 +479,6 @@ calendar <- data_frame(date = seq.Date(min(OnePOS_Assignments_Import$Start) %>% 
                                                         format = "%Y-%m-%d %H"), 
                          max(OnePOS_Assignments_Import$Start)+24*60*60, by = "DSTday"))
 
-
-# assignment history
-calendar_plus <- calendar
-calendar_plus$assigned_on_date <- NA
-for (i in 1:nrow(calendar_plus)){
-  calendar_plus$assigned_on_date[i] <- OnePOS_Assignments_Import %>% 
-    filter(Start <= calendar_plus$datetime[i] & (calendar_plus$datetime[i] < End | is.na(End))) %>% nrow()
-}
-
-
 # active state history
 inc_state_1 <- readxl::read_excel(path="\\\\cewp1650\\Chris Jabr Reports\\ONOW Exports\\inc_state_1.xlsx")
 inc_state_2 <- readxl::read_excel(path="\\\\cewp1650\\Chris Jabr Reports\\ONOW Exports\\inc_state_2.xlsx")
@@ -489,41 +486,37 @@ inc_state_3 <- readxl::read_excel(path="\\\\cewp1650\\Chris Jabr Reports\\ONOW E
 inc_state_history <- bind_rows(inc_state_1, inc_state_2, inc_state_3) %>% distinct()
 inc_state_history$Start <- force_tz(inc_state_history$Start, "US/Central")
 inc_state_history$End <- force_tz(inc_state_history$End, "US/Central")
-
-
-calendar_plus$active_on_date <- NA
-for (i in 1:nrow(calendar_plus)){
-  calendar_plus$active_on_date[i] <- inc_state_history %>% 
-    filter(Start <= calendar_plus$datetime[i] & (calendar_plus$datetime[i] < End | is.na(End))) %>% nrow()
-}
-
-
-calendar_plus$active_and_assigned <- NA
-for (i in 1:nrow(calendar_plus)){
-  calendar_plus$active_and_assigned[i] <- inc
-}
-
-# creating tables to join & compare...
-OnePOS_Assignments_Import %>% filter(Start <= calendar_plus$datetime[1] & (calendar_plus$datetime[1] < End | is.na(End))) %>% View()
-inc_state_history %>% filter(Start <= calendar_plus$datetime[1] & (calendar_plus$datetime[1] < End | is.na(End))) %>% View()
-# next: join by inc #, etc...
+inc_state_history <- rename(inc_state_history, State = Value, Start_State = Start, End_State = End)
 
 
 ## TABLE WITH OVOT
-
 # get list of distinct incidents
 ovot_incidents <- bind_rows(OnePOS_Assignments_Import %>% select(Number), inc_state_history %>% select(Number)) %>% distinct()
-# create result table
+
+# loop each day, left join ticket list onto historical data, and insert results into result table
+# NOTE: NULLS FOR ASSIGN. TEAM PROBABLY MEAN A NON-ONEPOS TEAM. ONLY ONEPOS ASSIGNMENTS WERE PULLED
 ovot <- data_frame()
-# join across with time & team/status at that time
-ovot_incidents %>% left_join(inc_state_history, by = "Number") %>% 
-  filter(Start <= calendar_plus$datetime[1] & (calendar_plus$datetime[1] < End | is.na(End))) %>%
-  mutate(the_datetime = calendar_plus$datetime[1]) %>%
-  View()
-# insert results into temp table, and continue looping through calendar dates ....
 for (i in 1:nrow(calendar)){
-  
+  insert_day <- ovot_incidents %>% mutate(datetime = calendar$datetime[i]) %>% 
+    left_join(inc_state_history, by = "Number") %>%
+    filter(Start_State <= calendar$datetime[i] & (calendar$datetime[i] < End_State | is.na(End_State))) %>%
+    left_join(OnePOS_Assignments_Import, by = "Number") %>%
+    filter(Start_Team <= calendar$datetime[i] & (calendar$datetime[i] < End_Team | is.na(End_Team))) %>% 
+    distinct()
+  ovot <- bind_rows(ovot, insert_day)
 }
+# CHECK FOR DOUBLE ASSIGNMENTS ON DAYS. check w/o distinct
+# double check timezone conversions ...prototype
+
+
+
+write.csv(ovot, na = "", row.names = FALSE, "\\\\cewp1650\\Chris Jabr Reports\\ONOW Exports\\R Open Volume Over Time.csv")
+
+
+
+
+
+
 
 
 # reference: timezones
@@ -531,6 +524,29 @@ OlsonNames()
 force_tz(calendar$datetime[1], "US/Central")
 with_tz(calendar$datetime[1], "US/Central")
 
+# reference: aggregating values on a calendar
+  # calendar: aggregate assignment total on date
+  calendar_plus <- calendar
+  calendar_plus$assigned_on_date <- NA
+  for (i in 1:nrow(calendar_plus)){
+    calendar_plus$assigned_on_date[i] <- OnePOS_Assignments_Import %>% 
+      filter(Start_Team <= calendar_plus$datetime[i] & (calendar_plus$datetime[i] < End_Team | is.na(End_Team))) %>% nrow()
+  }
+  # calendar: aggregate active total on date
+  calendar_plus$active_on_date <- NA
+  for (i in 1:nrow(calendar_plus)){
+    calendar_plus$active_on_date[i] <- inc_state_history %>% 
+      filter(Start_State <= calendar_plus$datetime[i] & (calendar_plus$datetime[i] < End_State | is.na(End_State))) %>% nrow()
+  }
+
+# reference: bind dataframe rows & naming the source
+a <- data_frame(num = c(1,2,3))
+b <- data_frame(num = c(4,5))
+bind_rows(b = b, a = a, .id = "source_dataframe")
+
+
+  
+  
 ## homeaway meetup #1 - ai and machine learning...
 ## dosh analysis
 # cum amount vs days since first visit
@@ -544,3 +560,36 @@ with_tz(calendar$datetime[1], "US/Central")
 # all these grpahics with R ...network looking data. structure of this?
 # austin deep learning ...austin big data 
 # taylor - met at data science meetup.
+
+
+
+# kaggle meetup #1: instacart machine learning. predicting future basket based on past purchases.
+# github featureTools instacart-demo
+# featuretools package in python. Similar for R?
+# *** can you have a vector in a dataframe value...? [0, 1, 0]. you don't even need this - just have diff columns
+# 
+
+# reference: putting vectors/lists inside dataframes
+test <- data_frame(id = c(1,2), name = c("bob", "mary"))
+test
+test$children <- list(c("bobette", "bobby"), c("marianne", "marietta"))
+test
+View(test)
+
+
+# graph databases...
+# stitch fix example ... multithreaded algorithm tour...collaborative filtering?
+# iampatgrady on github
+# numenta.org machine learning - high temporal memory neuron ... anomolous detection. htm model.
+# google api text mining
+# basically: use tools to create a bunch of calc columns for time series analysis ...
+# python titanic notebook. guide thing. published notebook guide that shows the entire ML workflow...
+
+# reference: string search inside of files
+getwd()
+dir()
+readLines("Scratchpad.R")
+readLines("Scratchpad.R") %>% str()
+str_detect(readLines("Scratchpad.R"), "readLine")
+readLines("Scratchpad.R") %>% attributes()
+readLines("Scratchpad.R")[str_detect(readLines("Scratchpad.R"), "readLine")]
