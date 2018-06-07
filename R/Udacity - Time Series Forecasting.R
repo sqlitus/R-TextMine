@@ -29,20 +29,36 @@
 
 ## additive vs multiplicative
 # additive method: useful when trend & seasonal variation are constant. linear. e.g. +1000 bookings
-# multiplicative: "..." increases or decreases. exponential. e.g. x1.5 bookings.
+# multiplicative: "..." increases or decreases. exponential. e.g. x1.5 bookings. when things change over time.
 
 
 # Simple Exponential Smoothing Method
-# Holt's Linear Trend Method
-# Exponential Trend Method
-# Holt-Winters Seasonal Method
+  # weight the most recent obs. alpha. 0 to 1. damping = 1 - alpha, applied to last forecast amount...
+# Holt's Linear Trend Method. trend + level calculations, applied additively (linear trend line)
+# Exponential Trend Method. level + trend components, applied multiplicatively (exponential trend line)
+# Dampted trend measure. Phi. low = less change
+# Holt-Winters Seasonal Method. 3 smoothing equation: level, trend, seasonal. often used with damped parameter.
 
-
+# decompose ETS
+ets.data <- readxl::read_xlsx("C:\\Users\\chris.jabr\\Downloads\\champagne-sales.xlsx")
+myts <- ts(ets.data$`Champagne Sales`, frequency = 12, start = c(2000,1))
+myts
+plot(myts)
+stl(myts, s.window = "periodic") %>% plot()
+decompose(myts)
+decompose(myts) %>% plot()
+# simple moving average
+library(TTR)
+SMA(myts, n = 3)
+plot(myts)
+plot.ts(SMA(myts, n = 3))
+plot.ts(SMA(myts))
 
 
 
 
 # reference: random numbers and sequences and time series and forecasting functions
+library(tidyverse)
 seq(1,5)
 rnorm(5)
 rep(5,1)
@@ -55,12 +71,17 @@ test <- sample(1:500, 72)
 
 ts(test)
 ts(test, frequency = 6)
-ts(test, start=c(2009, 1), end=c(2014, 12), frequency=12)
-ts(test, start=c(2009, 1), end=c(2014, 12), frequency=6)
-ts(test, start=c(2009, 1), end=c(2014, 12), frequency=1)
+# start = start year & period. frequency = periods per year.
 myts <- ts(test, start=c(2009, 1), end=c(2014, 12), frequency=12)
+myts
 plot(myts)
+# ETS plot
 stl(myts, s.window = "periodic") %>% plot
 HoltWinters(myts, beta = F, gamma = F)
 HoltWinters(myts, beta = F, gamma = F)$x
 HoltWinters %>% str()
+
+
+# reference: ggplot time series and overlaying multiple time series line plots
+# https://plot.ly/ggplot2/time-series/
+ggplot(ets.data, aes(x = Month, y = `Champagne Sales`)) + geom_bar(stat = "identity")
