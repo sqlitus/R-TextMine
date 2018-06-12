@@ -427,7 +427,8 @@ inc_data$derived_BU_source <- case_when(
 inc_data$derived_Lane <- inc_data$`Short description` %>%
   str_extract("(?i)(lane|reg|tab|pck|svr|aha)\\W{0,2}\\d{2,3}") %>% toupper() %>%
   str_replace_all("\\W", "") %>%
-  str_replace("([A-Z])(\\d)", "\\1 \\2")
+  str_replace("([A-Z])(\\d)", "\\1 \\2") %>%
+  str_replace("(?i)lane", "REG")
 inc_data$derived_Phase_Num <- 
   str_extract(inc_data$`Short description`, "(\\d{1,2}½?|\\d[ ]?\\d/\\d)[ ]?[.]\\d[.]\\d")
 inc_data$extracted_Location <- 
@@ -440,13 +441,6 @@ inc_data$derived_Location_source <- case_when(
 inc_data$derived_Region <- str_sub(inc_data$derived_Location, 1, 2) %>% toupper()
 
 
-filter(inc_data, grepl("[a-z]", inc_data$derived_Location)) %>% View()
-filter(inc_data, is.na(derived_Location)) %>% View()
-filter(inc_data, derived_Region == "36") %>% View()
-filter(inc_data, derived_Region == "TS") %>% View()
-filter(inc_data, grepl("[a-z]", inc_data$derived_Location)) %>% View()
-
-
 # get rid of "builder" columns
 inc_data$title_extracted_BU <- NULL
 inc_data$title_extracted_DeviceName <- NULL
@@ -454,8 +448,17 @@ inc_data$title_extracted_DeviceName_BU <- NULL
 inc_data$extracted_Location <- NULL
 
 
-
-
+# just checking data
+filter(inc_data, grepl("[a-z]", inc_data$derived_Location)) %>% View()
+filter(inc_data, is.na(derived_Location)) %>% View()
+filter(inc_data, derived_Region == "36") %>% View()
+filter(inc_data, derived_Region == "TS") %>% View()
+filter(inc_data, grepl("[a-z]", inc_data$derived_Location)) %>% View()
+unique(inc_data$derived_Lane)[unique(inc_data$derived_Lane) %>% str_detect("REG")]
+inc_data %>% distinct(derived_Lane)
+inc_data %>% distinct(derived_Lane) %>% filter(grepl("AHA", derived_Lane))
+table(inc_data$derived_Lane) %>% sort(decreasing = T)
+filter(inc_data, derived_Lane == "REG 20") %>% View()
 
 
 ## Spell checking & text mining
