@@ -39,6 +39,8 @@
 # Dampted trend measure. Phi. low = less change
 # Holt-Winters Seasonal Method. 3 smoothing equation: level, trend, seasonal. often used with damped parameter.
 
+library(tidyverse)
+
 # decompose ETS
 ets.data <- readxl::read_xlsx("C:\\Users\\chris.jabr\\Downloads\\champagne-sales.xlsx")
 myts <- ts(ets.data$`Champagne Sales`, frequency = 12, start = c(2000,1))
@@ -47,17 +49,73 @@ plot(myts)
 stl(myts, s.window = "periodic") %>% plot()
 decompose(myts)
 decompose(myts) %>% plot()
+
 # simple moving average
+# http://a-little-book-of-r-for-time-series.readthedocs.io/en/latest/src/timeseries.html
 library(TTR)
 SMA(myts, n = 3)
 plot(myts)
 plot.ts(SMA(myts, n = 3))
+plot.ts(SMA(myts, n = 6))
 plot.ts(SMA(myts))
+plot.ts(SMA(myts, n = 15))
+
+# plot seasonally adjusted
+decompose(myts)
+plot(myts)
+plot(decompose(myts))
+plot(decompose(myts)$trend)
+plot(decompose(myts)$seasonal)
+plot(decompose(myts)$random)
+
+myts - decompose(myts)$seasonal
+plot(myts - decompose(myts)$seasonal) # seasonality removed.
+plot(myts - decompose(myts)$random)
+
+
+
+# Lesson 3 : ARIMA ----
+# AR: p = periods
+# I:  d = differencing. number of times differencing needed to make the plot stationary
+# MA: q = lags of error
+
+# stationary time series: mean & variance constant over time (around 0)
+# helps mean & variance
+# use 'differencing' to turn a time series into stationary
+ets.data <- ets.data %>% mutate(lag = lag(`Champagne Sales`)) %>%
+  mutate(d1 = `Champagne Sales` - lag) %>%
+  mutate(d2 = d1 - lag(d1))
+plot.ts(ts(ets.data$d1, frequency = 12, start = c(2000,1)))
 
 
 
 
-# reference: random numbers and sequences and time series and forecasting functions
+
+
+
+
+
+#### Time Series Forecasting in R | Edureka ####
+library(tidyverse)
+data("AirPassengers")
+View(AirPassengers)
+attributes(AirPassengers); start(AirPassengers); end(AirPassengers); summary(AirPassengers)
+as_data_frame(AirPassengers) %>% View()
+plot(AirPassengers)
+abline(reg = lm(AirPassengers ~ time(AirPassengers))) # mean. changes by timeframe. average of two points? something more.
+time(AirPassengers)
+cycle(AirPassengers)
+
+
+
+
+
+
+
+
+
+
+# reference: random numbers and sequences and time series and forecasting functions ----
 library(tidyverse)
 seq(1,5)
 rnorm(5)
@@ -82,6 +140,53 @@ HoltWinters(myts, beta = F, gamma = F)$x
 HoltWinters %>% str()
 
 
-# reference: ggplot time series and overlaying multiple time series line plots
+# reference: ggplot time series and overlaying multiple time series line plots ----
 # https://plot.ly/ggplot2/time-series/
 ggplot(ets.data, aes(x = Month, y = `Champagne Sales`)) + geom_bar(stat = "identity")
+
+# reference:plotly ----
+plotly::plot_ly(ets.data, x = ~Month, y = ~`Champagne Sales`, type = )
+
+
+#### reference: converting TS to dataframe and vis versa ----
+data("AirPassengers")
+
+# creates matrix
+ts_to_df <- tapply(AirPassengers, list(year = floor(time(AirPassengers)), month = month.abb[cycle(AirPassengers)]), c)
+ts_to_df
+as_data_frame(ts_to_df) %>% View()
+
+
+month.abb
+month.abb %>% str()
+class(month.abb)
+cycle(AirPassengers)
+time(AirPassengers)
+month.abb[cycle(AirPassengers)]
+month.abb[cycle(AirPassengers)][1:15]
+month.abb[cycle(AirPassengers)][1:15][5:10][1:2]
+
+# convert ts to matrix to df & gather
+tt <- ts(rnorm(12*5, 17, 8), start=c(1981,1), frequency = 12)
+tt
+dmn <- list(month.abb, unique(floor(time(tt)))) # list of row & column names
+dmn_df <- as.data.frame(t(matrix(tt, 12, dimnames = dmn))) # create matrix & transpose
+dmn_df
+gather(dmn_df, key = "Month", value = "Value") # automatically makes key & value pairs w/ all columns
+
+
+unique()
+unique(floor(time(tt)))
+dmn
+matrix(tt, 12, dimnames = dmn)
+t(matrix(tt, 12, dimnames = dmn))
+
+# Air Passengers ts
+dmn_air <- list(month.abb, unique(floor(time(AirPassengers)))) # needs time
+dmn_air_df <- as_data_frame(t(matrix(AirPassengers, 12, dimnames = dmn_air)))
+gather(dmn_air_df) %>% View()
+View(AirPassengers)
+
+# list ts to df conversion example
+list(year = floor(time(tt)), month = month.abb[cycle(tt)]) # get each year for ts and string of months
+tapply(tt, list(year = floor(time(tt)), month = month.abb[cycle(tt)]), c)
