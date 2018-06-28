@@ -596,3 +596,11 @@ readLines("Scratchpad.R") %>% str()
 str_detect(readLines("Scratchpad.R"), "readLine")
 readLines("Scratchpad.R") %>% attributes()
 readLines("Scratchpad.R")[str_detect(readLines("Scratchpad.R"), "readLine")]
+
+
+# reference: boolean logic operators ----
+function() {print('hello'); TRUE }
+FALSE && 5
+FALSE & 5
+5 | FALSE
+5 || FALSE

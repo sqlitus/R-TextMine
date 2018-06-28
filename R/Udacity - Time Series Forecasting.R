@@ -105,14 +105,20 @@ plot(AirPassengers)
 abline(reg = lm(AirPassengers ~ time(AirPassengers))) # mean. changes by timeframe. average of two points? something more.
 time(AirPassengers)
 cycle(AirPassengers)
+plot(aggregate(AirPassengers, FUN = mean))
+boxplot(AirPassengers ~ cycle(AirPassengers))
+plot(diff(log(AirPassengers)))
+plot(AirPassengers)
 
+# AR I MA
+# p  d q
+acf(AirPassengers)
+acf(diff(log(AirPassengers))) # calculates value of q for Moving Average
+pacf(diff(log(AirPassengers))) # value of p
 
-
-
-
-
-
-
+fit <- arima(log(AirPassengers), c(0,1,1), seasonal = list(order = c(0,1,1), period = 12))
+pred <- predict(fit, n.ahead = 10*12)
+ts.plot(AirPassengers, 2.718^pred$pred, log = "y", lty = c(1,3))
 
 
 # reference: random numbers and sequences and time series and forecasting functions ----
