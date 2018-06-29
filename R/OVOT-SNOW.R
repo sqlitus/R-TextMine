@@ -1,7 +1,7 @@
 # OVOT HISTORICAL BACKLOG REPORT #
 # Using Incident Assignment History & State History
 
-library(tidyverse)
+library(tidyverse); library(lubridate)
 
 # import all appropriately named files
 path <- "\\\\cewp1650\\Chris Jabr Reports\\ONOW Exports\\INC History"
