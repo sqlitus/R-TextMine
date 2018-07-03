@@ -2,26 +2,31 @@
 # Using Incident Assignment History & State History
 
 library(tidyverse); library(lubridate)
+start_time <- Sys.time()
+print(paste("Starting:", start_time))
 
 # import all appropriately named files
 path <- "\\\\cewp1650\\Chris Jabr Reports\\ONOW Exports\\INC History"
 state_history_files <- list.files(path, "(?i)state_hist", full.names = TRUE)
 assign_history_files <- list.files(path, "(?i)assign_hist", full.names = TRUE)
 
-# merge appropriate files into appropriate dataframes
+# merge state history
 state_history <- data_frame()
 for (i in 1:length(state_history_files)){
   data <- readxl::read_excel(state_history_files[i])
-  data$import_sheet <- str_extract(state_history_files[i], "(?<=/).*") # positive lookbehind
+  # data$import_sheet <- str_extract(state_history_files[i], "(?<=/).*") # positive lookbehind
   state_history <- bind_rows(state_history, data)
 }
+state_history <- state_history %>% distinct()
 
+# merge assignment history
 assign_history <- data_frame()
 for (i in 1:length(assign_history_files)){
   data <- readxl::read_excel(assign_history_files[i])
-  data$import_sheet <- str_extract(assign_history_files[i], "(?<=/).*") # positive lookbehind
+  # data$import_sheet <- str_extract(assign_history_files[i], "(?<=/).*") # positive lookbehind
   assign_history <- bind_rows(assign_history, data)
 }
+assign_history <- assign_history %>% distinct()
 
 # set TZ of imported times to CST
 state_history[c('Start','End')] <- force_tz(state_history[c('Start','End')], tzone = 'US/Central')
@@ -39,7 +44,7 @@ calendar <- data_frame(
 # get all distinct incidents from both datasets
 distinct_incidents <- bind_rows(state_history %>% select(Number), assign_history %>% select(Number)) %>% distinct()
 
-# construct daily list of open + OnePOS assigned tickets
+# construct daily list of open + OnePOS assigned tickets. use state history first since it's all tickets.
 ovot <- data_frame()
 for (i in 1:nrow(calendar)){
   insert_day <- distinct_incidents %>% mutate(datetime = calendar$datetime[i]) %>% 
@@ -50,7 +55,15 @@ for (i in 1:nrow(calendar)){
     distinct()
   ovot <- bind_rows(ovot, insert_day)
 }
+ovot <- ovot %>% distinct()
 
 # prune & output file
 out <- ovot %>% select(Number, datetime, Status=Value.x, Team=Value.y)
+writeLines(paste("Exporting file now at", Sys.time(),"\n Elapsed time:", Sys.time()-start_time))
 write.csv(out, na = "", row.names = FALSE, paste0(path, "\\ovot.csv"))
+
+# timing
+writeLines(paste0("Start time: ", start_time, "\nEnd time: ", Sys.time(), "\nElapsed time: ", Sys.time() - start_time))
+
+
+## add check for proper data size...

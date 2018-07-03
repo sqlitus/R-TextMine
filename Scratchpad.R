@@ -604,3 +604,13 @@ FALSE && 5
 FALSE & 5
 5 | FALSE
 5 || FALSE
+
+# reference: subsetting df vs matrix
+calendar[1:5] #error
+calendar[1:5,]
+str(calendar[1:5,])
+library(tidyverse)
+select(calendar, matches("date"))
+select(calendar, matches("^date"))
+matrix(c(1:12),3,4)
+matrix(c(1:12),3,4)[1:5]
